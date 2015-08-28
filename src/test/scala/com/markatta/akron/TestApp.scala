@@ -2,10 +2,13 @@ package com.markatta.akron
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import expression.CronExpression
+
 import scala.io.StdIn
 import scala.util.{Failure, Success}
 
+/**
+ * Test app that can be run using sbt test:run to play around with scheduling message sends
+ */
 object TestApp extends App {
 
   implicit val system = ActorSystem(
@@ -20,7 +23,7 @@ object TestApp extends App {
     }
   })
 
-  val crontab = system.actorOf(SimpleCronTabActor.props, "crontab")
+  val crontab = system.actorOf(CronTab.props, "crontab")
 
 
   println("Write cron expressions to schedule ([h] [m] [d] [M] [dow]), quit to quit.")
@@ -29,7 +32,7 @@ object TestApp extends App {
     .takeWhile(str => str != "quit")
     .foreach { line =>
       CronExpression.parse(line) match {
-        case Success(expr) => crontab ! SimpleCronTabActor.Schedule(loggingActor, "message", expr)
+        case Success(expr) => crontab ! CronTab.Schedule(loggingActor, "message", expr)
         case Failure(ex) => println("Invalid crontab expression")
       }
     }

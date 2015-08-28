@@ -1,6 +1,7 @@
 package com.markatta.akron
 
-import java.time.{Month, LocalTime, LocalDate, LocalDateTime}
+import java.time.{LocalDateTime, Month}
+
 import scala.concurrent.duration._
 
 class TimeUtilsSpec extends BaseSpec {

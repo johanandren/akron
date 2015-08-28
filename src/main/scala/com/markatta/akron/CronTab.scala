@@ -1,128 +1,168 @@
+/*
+ * Copyright 2015 Johan Andrén
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.markatta.akron
 
 import java.time.LocalDateTime
+import java.util.UUID
 
-import com.markatta.akron.expression.CronExpression
+import akka.actor._
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.FiniteDuration
 
 /**
- * Minimal standalone crontab, does not schedule itself, just provides facilities for
- * keeping track of planned jobs and when they should next run.
- *
- * Instances are immutable so every modifying operation returns a new crontab.
- *
- * Sample usage:
- * {{{
- * import com.markatta.cron.expression.DSL._
- * import com.markatta.cron.CronTab
- * import scala.concurrent.ExecutionContext.Implicits.global
- * val crontab = Crontab()
- *  .schedule(
- *    "send mail",
- *    CronExpression(20, *, (mon, tue, wed), (feb, oct),
- *    { println("send that mail") }
- *  )
- *
- * val nextTime = crontab.nextExecutionTime
- * // somehow trigger execution at that time
- * }}}
+ * The simple crontab actor looses its state upon stop, does not remember what jobs
+ * has already been run. Only useful in a single actor system.
  */
 object CronTab {
 
-  /**
-   * @param name a descriptive name used for logging, in errors etc.
-   * @param executionContext execution context to execute the callback on
-   */
-  sealed abstract class Entry(val name: String, callback: () => Unit, val repeating: Boolean, executionContext: ExecutionContext) {
-    /** a textual description of when the entry will run */
-    def cronExpression: String
+  // protocol
+  /** schedule a message to be sent to an actor with a cron expression, the actor
+    * will reply with a [[Scheduled]] message containing a UUID for the crontab entry,
+    * If that actor terminates, the crontab entry will be removed
+    */
+  case class Schedule(recipient: ActorRef, message: Any, when: CronExpression)
+  case class Scheduled(id: UUID, recipient: ActorRef, message: Any)
 
-    def nextExecution: LocalDateTime
+  /** remove a scheduled job from the crontab, actor will reply with [[UnScheduled]] */
+  case class UnSchedule(id: UUID)
+  case class UnScheduled(id: UUID)
 
-    def execute(): Future[Unit] =
-      Future(callback())(executionContext)
+  /** Get a list of all the current jobs in the crontab, actor will reply with [[ListOfJobs]] */
+  case object GetListOfJobs
+  case class ListOfJobs(jobs: Seq[Job])
 
-  }
 
-  /** a cron expression based entry */
-  private class ExpressionEntry(
-    name: String,
-    expression: CronExpression,
-    val nextExecution: LocalDateTime,
-    callback: () => Unit,
-    executionContext: ExecutionContext) extends Entry(name, callback, true, executionContext) {
 
-    def cronExpression = expression.toString
+  /** models a scheduled job */
+  case class Job(id: UUID, recipient: ActorRef, message: Any, when: CronExpression)
 
-  }
 
-  /** an entry that will run once, at a specific time */
-  private class OneOffEntry(
-    name: String,
-    when: LocalDateTime,
-    callback: () => Unit,
-    executionContext: ExecutionContext) extends Entry(name, callback, false, executionContext) {
-
-    def nextExecution = when
-    def cronExpression = when.toString
-
-  }
-
-  implicit val ascTimeOrdering: Ordering[LocalDateTime] = Ordering.fromLessThan((a, b) =>
-    a.isBefore(b)
-  )
-
-  val empty = new CronTab()
-  def apply(): CronTab = empty
-
+  def props = Props(classOf[CronTab])
 }
 
 
-final class CronTab private (unsortedEntries: Seq[CronTab.Entry] = Seq.empty, val history: List[(String, LocalDateTime)] = Nil) {
+
+class CronTab extends Actor with ActorLogging {
 
   import CronTab._
+  import TimeUtils._
+  import context.dispatcher
 
-  val entries = unsortedEntries.sortBy(_.nextExecution)
+  case class Trigger(id: UUID)
 
-  def schedule(name: String, expression: CronExpression, callback: => Unit)(implicit ec: ExecutionContext): CronTab = {
-    val nextTime = expression.nextOccurrence(LocalDateTime.now())
-    new CronTab(entries :+ new ExpressionEntry(name, expression, nextTime, () => callback, ec), history)
+  case class Entry(job: Job, nextExecutionTime: LocalDateTime)
+
+  var entries: Vector[Entry] = Vector()
+  var lastScheduled: Option[Cancellable] = None
+  var nextScheduled: Option[(UUID, LocalDateTime)] = None
+
+  override def receive: Receive = {
+
+    case Schedule(recipient, message, when) if jobAlreadyExists(recipient, message, when) =>
+      log.warning("Not scheduling job to send {} to {} since an identical job already exists", message, recipient)
+
+    case Schedule(recipient, message, when) =>
+      val id = UUID.randomUUID()
+      log.info("Scheduling {} to send {} to {}, cron expression: {}", id, message, recipient.path, when)
+      context.watch(recipient)
+      addJob(Job(id, recipient, message, when))
+      updateNext()
+      sender() ! Scheduled(id, recipient, message)
+
+
+    case Trigger(id) =>
+      runJob(id)
+      updateNext()
+
+    case Terminated(actor) =>
+      entries.filter(_.job.recipient == actor)
+        .foreach { entry =>
+          log.info("Removing entry {} because destination actor terminated", entry.job.id)
+          removeJob(entry.job.id)
+        }
+      updateNext()
+
+    case UnSchedule(id) =>
+      log.info("Unscheduling job {}", id)
+      removeJob(id)
+      updateNext()
+
+    case GetListOfJobs =>
+      sender() ! ListOfJobs(entries.map(_.job))
+
   }
 
-  def scheduleOneOff(name: String, when: LocalDateTime, callback: => Unit)(implicit ec: ExecutionContext): CronTab = {
-    new CronTab(entries :+ new OneOffEntry(name, when, () => callback, ec), history)
+  def runJob(id: UUID): Unit = {
+    entries = entries.map {
+      case Entry(job @ Job(`id`, recipient, message, expr), _) =>
+        log.debug("Running job {} sending '{}' to [{}]", id, message, recipient.path)
+        recipient ! message
+        // offset the time one minute, so that we do not end up running this instance again
+        Entry(job, job.when.nextOccurrence(moveIntoNextMinute(LocalDateTime.now())))
+
+      case x => x
+    }
   }
 
-  /**
-   * @return The time to invoke execute next to run the next up scheduled block
-   */
-  def nextExecutionTime: Option[LocalDateTime] = entries.headOption.map(_.nextExecution)
+  def removeJob(id: UUID): Unit ={
+    entries.find(_.job.id == id).foreach { entry =>
+      entries = entries.filterNot(_ == entry)
 
-  /**
-   * Execute the next up crontab entry, regardless of scheduled time. You are responsible to
-   * use [[nextExecutionTime]] to figure out when to execute the next time. If there are more
-   * jobs that should execute in the exact same time order is not guaranteed and only one of
-   * them will be executed.
-   *
-   * @return A new crontab updated with the state after the given and the future completion of the next job
-   *         (which is useful to handle errors, time completion etc.)
-   * TODO how to make sure we do not execute it again the same minute
-   */
-  def executeNext(): (CronTab, Future[Unit]) =
-    entries.headOption.fold[(CronTab, Future[Unit])](
-      // empty tab
-      (this, Future.successful(Unit))
-    ) ( head =>
-      (
-        new CronTab(
-          if (head.repeating) entries
-          else entries.tail,
-          (head.name, LocalDateTime.now()) :: history
-        ),
-        head.execute()
-      )
-    )
+      // make sure we don't monitor lifecycle of actors we don't have
+      // jobs for
+      if (!entries.exists(_.job.recipient == entry.job.recipient)) {
+        context.unwatch(entry.job.recipient)
+      }
+    }
+  }
 
+  def addJob(job: Job): Unit = {
+    entries = entries :+ Entry(job, job.when.nextOccurrence)
+  }
+
+  def updateNext(): Unit = {
+    entries = entries.sortBy(_.nextExecutionTime)
+    val nextUp = entries.headOption
+    val isAlreadyScheduled = 
+      nextUp.map(e => (e.job.id, e.nextExecutionTime)) == nextScheduled
+
+    if (!isAlreadyScheduled) {
+      lastScheduled.foreach(_.cancel())
+      lastScheduled = nextUp.fold[Option[Cancellable]](
+        None
+      ) { case Entry(Job(id, _, _, _), nextTime) =>
+        val offsetFromNow = durationUntil(nextTime)
+        log.debug("Next job up {} will run at {}, which is in {}", id, nextTime, offsetFromNow)
+        Some(schedule(offsetFromNow, self, Trigger(id)))
+      }
+      nextScheduled = nextUp.map(entry => (entry.job.id, entry.nextExecutionTime))
+    }
+  }
+
+  // for testability
+  def schedule(offsetFromNow: FiniteDuration, recipient: ActorRef, message: Any): Cancellable =
+    context.system.scheduler.scheduleOnce(offsetFromNow, recipient, message)
+
+
+  def jobAlreadyExists(recipient: ActorRef, message: Any, when: CronExpression): Boolean =
+    entries.exists(e => e.job.recipient == recipient && e.job.message == message && e.job.when == when)
+
+  override def postStop(): Unit = {
+    lastScheduled.foreach(_.cancel())
+  }
 }

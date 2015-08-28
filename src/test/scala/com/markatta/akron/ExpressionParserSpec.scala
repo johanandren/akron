@@ -1,6 +1,4 @@
-package com.markatta.akron.expression
-
-import com.markatta.akron.BaseSpec
+package com.markatta.akron
 
 import scala.util.{Failure, Success}
 

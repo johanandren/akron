@@ -1,8 +1,6 @@
-package com.markatta.akron.expression
+package com.markatta.akron
 
 import java.time.LocalDateTime
-
-import com.markatta.akron.BaseSpec
 
 class ModelSpec extends BaseSpec {
 

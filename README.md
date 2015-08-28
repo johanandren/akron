@@ -1,0 +1,28 @@
+# A crontab for actor systems
+
+Currently for running on a single node actor system.
+
+## Usage example
+```Scala    
+import com.markatta.akron._
+
+val system = ActorSystem("system")
+
+val crontab = system.actorOf(CronTab.props, "crontab")
+
+val someOtherActor = system.actorOf(SomeOtherActor.props, "etc")
+
+// send woo to someOtherActor once every minute
+crontab ! CronTab.Schedule(someOtherActor, "woo", CronExpression("* * * * *"))
+
+// there is also a type safe DSL for the expressions
+crontab ! CronTab.Schedule(someOtherActor, "wee", CronExpression(20, *, (mon, tue, wed), (feb, oct), *))
+```
+
+Scheduling a job gives it an unique id which is sent back in a Crontab.Scheduled that can be used later
+to unschedule that job. The crontab will watch the actor scheduled to receive messages for termination and
+if terminated will remove all jobs sending messages to it.
+
+CronTab.Unschedule(id) can be used to unschedule jobs.
+
+CronTab.GetListOfJobs can be used to get a CronTab.ListOfJobs back with all current crontab jobs.

@@ -1,30 +1,36 @@
 package com.markatta.akron
 
-import java.time.LocalDateTime
-import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
+import akka.testkit._
+import org.scalatest.{ShouldMatchers, WordSpecLike}
 
-class CronTabSpec extends BaseSpec {
+import scala.concurrent.duration.FiniteDuration
 
-  "The cron tab" should {
+class CronTabSpec
+  extends TestKit(ActorSystem("test"))
+  with WordSpecLike
+  with ShouldMatchers {
 
-    "not return a time if empty" in {
-      CronTab().nextExecutionTime should be (None)
+  "the simple crontab actor" should {
+
+    "schedule a new job" in {
+      val probe = TestProbe()
+      val recipient = TestProbe()
+      val crontab = system.actorOf(Props(new CronTab {
+        // for testability
+        override def schedule(offsetFromNow: FiniteDuration, recipient: ActorRef, message: Any): Cancellable = {
+          probe.ref ! (offsetFromNow, recipient, message)
+          new Cancellable {
+            override def isCancelled: Boolean = true
+            override def cancel(): Boolean = true
+          }
+        }
+      }))
+
+      crontab ! CronTab.Schedule(recipient.ref, "woo", CronExpression("* * * * *"))
+
+      val (timing, where, what) = probe.expectMsgType[(FiniteDuration, ActorRef, Any)]
+      where should equal (crontab)
     }
-
-    "return the time if there is one" in {
-      val when = LocalDateTime.now().plusHours(1)
-      val crontab = CronTab().scheduleOneOff("test", when, { println("running") })
-      crontab.nextExecutionTime should be (Some(when))
-    }
-
-    "return the time closest to now if there is more than one entry" in {
-      val inAnHour = LocalDateTime.now().plusHours(1)
-      val inTwoHours = inAnHour.plusHours(1)
-      val crontab = CronTab()
-        .scheduleOneOff("test1", inAnHour, { println("running") })
-        .scheduleOneOff("test2", inTwoHours, { println("running") })
-      crontab.nextExecutionTime should be (Some(inAnHour))
-    }
-
   }
 }
