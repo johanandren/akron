@@ -1,6 +1,11 @@
 # A crontab for actor systems
+[![Build Status](https://travis-ci.org/johanandren/akron.svg?branch=master)](https://travis-ci.org/johanandren/akron)
 
 Currently for running on a single node actor system.
+
+## Requirements
+* Java 8
+* Akka 2.4
 
 ## Usage example
 ```Scala    
