@@ -36,3 +36,7 @@ if terminated will remove all jobs sending messages to it.
 `CronTab.Unschedule(id)` can be used to unschedule jobs.
 
 `CronTab.GetListOfJobs` can be used to get a `CronTab.ListOfJobs` back with all current crontab jobs.
+
+
+## License
+Apache License, Version 2.0
