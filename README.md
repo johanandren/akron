@@ -29,10 +29,10 @@ crontab ! CronTab.Schedule(
   
 ```
 
-Scheduling a job gives it an unique id which is sent back in a Crontab.Scheduled that can be used later
+Scheduling a job gives it an unique id which is sent back in a `CronTab.Scheduled` that can be used later
 to unschedule that job. The crontab will watch the actor scheduled to receive messages for termination and
 if terminated will remove all jobs sending messages to it.
 
-CronTab.Unschedule(id) can be used to unschedule jobs.
+`CronTab.Unschedule(id)` can be used to unschedule jobs.
 
-CronTab.GetListOfJobs can be used to get a CronTab.ListOfJobs back with all current crontab jobs.
+`CronTab.GetListOfJobs` can be used to get a `CronTab.ListOfJobs` back with all current crontab jobs.
