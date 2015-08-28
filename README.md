@@ -21,7 +21,12 @@ val someOtherActor = system.actorOf(SomeOtherActor.props, "etc")
 crontab ! CronTab.Schedule(someOtherActor, "woo", CronExpression("* * * * *"))
 
 // there is also a type safe DSL for the expressions
-crontab ! CronTab.Schedule(someOtherActor, "wee", CronExpression(20, *, (mon, tue, wed), (feb, oct), *))
+import DSL._
+crontab ! CronTab.Schedule(
+  someOtherActor, 
+  "wee", 
+  CronExpression(20, *, (mon, tue, wed), (feb, oct), *))
+  
 ```
 
 Scheduling a job gives it an unique id which is sent back in a Crontab.Scheduled that can be used later
