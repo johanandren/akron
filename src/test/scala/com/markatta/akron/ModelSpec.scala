@@ -114,6 +114,20 @@ class ModelSpec extends BaseSpec {
       result.getHour shouldEqual 10
       result.getMinute shouldEqual 15
     }
+    "locate the next event from a given time 4" in {
+      val from = LocalDateTime.of(2015, 1, 1, 20, 54)
+
+      val expression = CronExpression(*, * / 5, *, *, *)
+
+      val result = expression.nextOccurrence(from)
+
+      result.getYear shouldEqual 2015
+      result.getMonth.getValue shouldEqual 1
+      result.getDayOfMonth shouldEqual 1
+      result.getHour shouldEqual 20
+      result.getMinute shouldEqual 55
+    }
+
   }
 
 }

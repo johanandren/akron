@@ -16,7 +16,7 @@ class TimeUtilsSpec extends BaseSpec {
       result.getDayOfMonth should be (8)
       result.getHour should be (20)
       result.getMinute should be (31)
-      result.getSecond should be (1)
+      result.getSecond should be (0)
     }
     
     "calculate the finite duration between two local date times" in {

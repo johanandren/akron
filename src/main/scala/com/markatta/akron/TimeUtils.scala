@@ -32,11 +32,11 @@ private[akron] object TimeUtils {
 
   def durationBetween(a: LocalDateTime, b: LocalDateTime): FiniteDuration = {
     import java.util.concurrent.TimeUnit
-    FiniteDuration(math.abs(ChronoUnit.SECONDS.between(a, b)), TimeUnit.SECONDS)
+    FiniteDuration(math.abs(ChronoUnit.MILLIS.between(a, b)), TimeUnit.MILLISECONDS)
   }
 
   def moveIntoNextMinute(time: LocalDateTime): LocalDateTime = {
-    time.withSecond(1).plus(1, ChronoUnit.MINUTES)
+    time.withSecond(0).plus(1, ChronoUnit.MINUTES)
   }
 
 }

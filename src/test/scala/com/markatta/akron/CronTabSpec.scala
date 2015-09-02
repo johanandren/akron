@@ -18,12 +18,9 @@ class CronTabSpec
       val recipient = TestProbe()
       val crontab = system.actorOf(Props(new CronTab {
         // for testability
-        override def schedule(offsetFromNow: FiniteDuration, recipient: ActorRef, message: Any): Cancellable = {
+        override def schedule(offsetFromNow: FiniteDuration, recipient: ActorRef, message: Any): TriggerTask = {
           probe.ref ! (offsetFromNow, recipient, message)
-          new Cancellable {
-            override def isCancelled: Boolean = true
-            override def cancel(): Boolean = true
-          }
+          new TriggerTask
         }
       }))
 

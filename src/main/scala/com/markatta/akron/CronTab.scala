@@ -17,7 +17,7 @@
 package com.markatta.akron
 
 import java.time.LocalDateTime
-import java.util.UUID
+import java.util.{TimerTask, Timer, UUID}
 
 import akka.actor._
 
@@ -61,15 +61,15 @@ class CronTab extends Actor with ActorLogging {
 
   import CronTab._
   import TimeUtils._
-  import context.dispatcher
 
-  case class Trigger(id: UUID)
+  case class Trigger(ids: Seq[UUID])
 
   case class Entry(job: Job, nextExecutionTime: LocalDateTime)
 
   var entries: Vector[Entry] = Vector()
-  var lastScheduled: Option[Cancellable] = None
-  var nextScheduled: Option[(UUID, LocalDateTime)] = None
+  var nextTrigger: Option[TriggerTask] = None
+
+  var timer = new Timer(self.path.name)
 
   override def receive: Receive = {
 
@@ -85,8 +85,9 @@ class CronTab extends Actor with ActorLogging {
       sender() ! Scheduled(id, recipient, message)
 
 
-    case Trigger(id) =>
-      runJob(id)
+    case Trigger(ids) =>
+      log.info(s"Triggering scheduled job(s) $ids")
+      ids.foreach(runJob)
       updateNext()
 
     case Terminated(actor) =>
@@ -113,9 +114,10 @@ class CronTab extends Actor with ActorLogging {
         log.debug("Running job {} sending '{}' to [{}]", id, message, recipient.path)
         recipient ! message
         // offset the time one minute, so that we do not end up running this instance again
-        Entry(job, job.when.nextOccurrence(moveIntoNextMinute(LocalDateTime.now())))
+        val laterThanNow = moveIntoNextMinute(LocalDateTime.now())
+        Entry(job, job.when.nextOccurrence(laterThanNow))
 
-      case x => x
+      case itsAKeeper => itsAKeeper
     }
   }
 
@@ -137,32 +139,49 @@ class CronTab extends Actor with ActorLogging {
 
   def updateNext(): Unit = {
     entries = entries.sortBy(_.nextExecutionTime)
-    val nextUp = entries.headOption
-    val isAlreadyScheduled = 
-      nextUp.map(e => (e.job.id, e.nextExecutionTime)) == nextScheduled
+    // one or more jobs next up
+    val nextUp: Seq[Entry] = {
+      entries.headOption.fold(Vector.empty[Entry])(earliest =>
+        entries.takeWhile(_.nextExecutionTime == earliest.nextExecutionTime)
+      )
+    }
 
-    if (!isAlreadyScheduled) {
-      lastScheduled.foreach(_.cancel())
-      lastScheduled = nextUp.fold[Option[Cancellable]](
-        None
-      ) { case Entry(Job(id, _, _, _), nextTime) =>
-        val offsetFromNow = durationUntil(nextTime)
-        log.debug("Next job up {} will run at {}, which is in {}", id, nextTime, offsetFromNow)
-        Some(schedule(offsetFromNow, self, Trigger(id)))
-      }
-      nextScheduled = nextUp.map(entry => (entry.job.id, entry.nextExecutionTime))
+    nextTrigger.foreach(_.cancel())
+    if (nextUp.nonEmpty) {
+      val nextTime = nextUp.head.nextExecutionTime
+      val now = LocalDateTime.now()
+      val ids = nextUp.map(_.job.id)
+      nextTrigger =
+        if (nextTime.isBefore(now) || nextTime.isEqual(now)) {
+          // oups, we missed it, trigger right away
+          log.warning("Missed execution of {} at {}, triggering right away", ids, nextTime)
+          self ! Trigger(ids)
+          None
+        } else {
+          val offsetFromNow = durationBetween(now, nextTime)
+          log.debug("Next jobs up {} will run at {}, which is in {}s", ids, nextTime, offsetFromNow.toSeconds)
+          Some(schedule(offsetFromNow, self, Trigger(ids)))
+        }
     }
   }
 
   // for testability
-  def schedule(offsetFromNow: FiniteDuration, recipient: ActorRef, message: Any): Cancellable =
-    context.system.scheduler.scheduleOnce(offsetFromNow, recipient, message)
+  def schedule(offsetFromNow: FiniteDuration, recipient: ActorRef, message: Any): TriggerTask = {
+    assert(offsetFromNow.toMillis > 0)
+    val task = new TriggerTask(message)
+    timer.schedule(task, offsetFromNow.toMillis)
+    task
+  }
 
 
   def jobAlreadyExists(recipient: ActorRef, message: Any, when: CronExpression): Boolean =
     entries.exists(e => e.job.recipient == recipient && e.job.message == message && e.job.when == when)
 
   override def postStop(): Unit = {
-    lastScheduled.foreach(_.cancel())
+    timer.cancel()
+  }
+
+  class TriggerTask(msg: Any) extends TimerTask {
+    override def run(): Unit = self ! msg
   }
 }

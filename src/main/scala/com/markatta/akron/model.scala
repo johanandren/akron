@@ -106,7 +106,7 @@ case class CronExpression(
   def nextOccurrence: LocalDateTime = nextOccurrence(LocalDateTime.now())
 
   def nextOccurrence(from: LocalDateTime): LocalDateTime = {
-    val everyMinute = Stream.iterate(from)((time) =>
+    val everyMinute = Stream.iterate(from.withSecond(0).withNano(0))((time) =>
       time.plusMinutes(1)
     )
 
