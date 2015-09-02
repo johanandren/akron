@@ -7,6 +7,12 @@ Currently for running on a single node actor system.
 * Java 8
 * Akka 2.4
 
+## How to use
+Add to your build sbt:
+```Scala
+libraryDependencies += "com.markatta" %% "akron" % "1.0"
+```
+
 ## Usage example
 ```Scala    
 import com.markatta.akron._
