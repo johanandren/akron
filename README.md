@@ -1,4 +1,4 @@
-# A crontab for actor systems
+# A crontab actor for Akka
 [![Build Status](https://travis-ci.org/johanandren/akron.svg?branch=master)](https://travis-ci.org/johanandren/akron)
 
 Currently for running on a single node actor system.
