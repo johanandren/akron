@@ -4,7 +4,7 @@ import _root_.xerial.sbt.Sonatype._
 import de.heikoseeberger.sbtheader.license.Apache2_0
 
 name := "akron"
-organization := "com.markatta.akron"
+organization := "com.markatta"
 scalaVersion := "2.11.7"
 
 lazy val akkaVersion = "2.4.0-RC1"
@@ -28,7 +28,7 @@ releaseSettings
 sonatypeSettings
 ReleaseKeys.crossBuild := false
 licenses := Seq("Apache License, Version 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
-homepage := Some(url("https://github.com/johanandren/timeforscala"))
+homepage := Some(url("https://github.com/johanandren/akron"))
 publishMavenStyle := true
 publishArtifact in Test := false
 pomIncludeRepository := { _ => false }
@@ -42,8 +42,8 @@ publishTo := Some {
 
 pomExtra :=
   <scm>
-    <url>git@github.com:johanandren/timeforscala.git</url>
-    <connection>scm:git:git@github.com:johanandren/timeforscala.git</connection>
+    <url>git@github.com:johanandren/akron.git</url>
+    <connection>scm:git:git@github.com:johanandren/akron.git</connection>
   </scm>
     <developers>
       <developer>
