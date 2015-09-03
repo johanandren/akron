@@ -13,7 +13,7 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-  "com.typesafe.akka" %% "akka-testkit" % akkaVersion
+  "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test"
 )
 
 fork in run := true
