@@ -75,8 +75,8 @@ object CronExpression {
 }
 
 case class CronExpression(
-   hour: HourExpression,
    minute: MinuteExpression,
+   hour: HourExpression,
    dayOfMonth: DayOfMonthExpression,
    month: MonthExpression,
    dayOfWeek: DayOfWeekExpression) {

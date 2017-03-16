@@ -28,7 +28,7 @@ object TestApp extends App {
   val crontab = system.actorOf(CronTab.props, "crontab")
 
 
-  println("""Write cron expressions to schedule "[h] [m] [d] [M] [dow] text-msg-to-send" (or 'quit' to quit).""")
+  println("""Write cron expressions to schedule "[m] [h] [d] [M] [dow] text-msg-to-send" (or 'quit' to quit).""")
   val Pattern = """((?:\S+ ){5})(\S+)""".r
   Stream
     .continually(StdIn.readLine())
