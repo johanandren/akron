@@ -6,11 +6,12 @@ Currently for running on a single node actor system.
 ## Requirements
 * Java 8
 * Akka 2.4
+* Scala 2.11
 
 ## How to use
 Add to your build sbt:
 ```Scala
-libraryDependencies += "com.markatta" %% "akron" % "1.0"
+libraryDependencies += "com.markatta" %% "akron" % "1.1"
 ```
 
 ## Usage example
