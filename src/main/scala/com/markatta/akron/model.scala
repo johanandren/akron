@@ -141,7 +141,7 @@ final case class CronExpression(
   }
 
 
-  override def toString = s"$hour $minute $dayOfMonth $month $dayOfWeek"
+  override def toString = s"$minute $hour $dayOfMonth $month $dayOfWeek"
 
 }
 
