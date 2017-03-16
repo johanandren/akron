@@ -83,8 +83,8 @@ private [akron] class ExpressionParser extends RegexParsers {
     exactly.map { case Exactly(n) => Exactly(n % 7)}
 
 
-  def expression: Parser[CronExpression] = hour ~ minute ~ dayOfMonth ~ month ~ dayOfWeek ^^ {
-    case hour~minute~dayOfMonth~month~dayOfWeek => CronExpression(hour, minute, dayOfMonth, month, dayOfWeek)
+  def expression: Parser[CronExpression] = minute ~ hour ~ dayOfMonth ~ month ~ dayOfWeek ^^ {
+    case minute~hour~dayOfMonth~month~dayOfWeek => CronExpression(minute, hour, dayOfMonth, month, dayOfWeek)
   }
 
 

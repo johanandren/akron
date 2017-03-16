@@ -76,7 +76,7 @@ class ModelSpec extends BaseSpec {
     "locate the next event from a given time 1" in {
       val from = LocalDateTime.of(2015, 1, 1, 14, 30)
 
-      val expression = CronExpression(20, 30, *, *, *)
+      val expression = CronExpression(30, 20, *, *, *)
 
       val result = expression.nextOccurrence(from)
 
@@ -90,7 +90,7 @@ class ModelSpec extends BaseSpec {
     "locate the next event from a given time 2" in {
       val from = LocalDateTime.of(2015, 1, 1, 14, 30)
 
-      val expression = CronExpression(* / 4, 0, *, *, *)
+      val expression = CronExpression(0, * / 4, *, *, *)
 
       val result = expression.nextOccurrence(from)
 
@@ -104,7 +104,7 @@ class ModelSpec extends BaseSpec {
     "locate the next event from a given time 3" in {
       val from = LocalDateTime.of(2015, 1, 1, 14, 30)
 
-      val expression = CronExpression(10, many(15, 25, 35), *, *, tue)
+      val expression = CronExpression(many(15, 25, 35), 10, *, *, tue)
 
       val result = expression.nextOccurrence(from)
 
@@ -117,7 +117,7 @@ class ModelSpec extends BaseSpec {
     "locate the next event from a given time 4" in {
       val from = LocalDateTime.of(2015, 1, 1, 20, 54)
 
-      val expression = CronExpression(*, * / 5, *, *, *)
+      val expression = CronExpression(* / 5, *, *, *, *)
 
       val result = expression.nextOccurrence(from)
 

@@ -7,10 +7,10 @@ name := "akron"
 organization := "com.markatta"
 scalaVersion := "2.11.7"
 
-lazy val akkaVersion = "2.4.0-RC1"
+lazy val akkaVersion = "2.4.17"
 
 libraryDependencies ++= Seq(
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5",
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "org.scalatest" %% "scalatest" % "2.2.4" % "test",
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test"
