@@ -78,7 +78,7 @@ class ModelSpec extends BaseSpec {
 
       val expression = CronExpression(30, 20, *, *, *)
 
-      val result = expression.nextOccurrence(from)
+      val Some(result) = expression.nextTriggerTime(from)
 
       result.getYear shouldEqual 2015
       result.getMonth.getValue shouldEqual 1
@@ -92,7 +92,7 @@ class ModelSpec extends BaseSpec {
 
       val expression = CronExpression(0, * / 4, *, *, *)
 
-      val result = expression.nextOccurrence(from)
+      val Some(result) = expression.nextTriggerTime(from)
 
       result.getYear shouldEqual 2015
       result.getMonth.getValue shouldEqual 1
@@ -106,7 +106,7 @@ class ModelSpec extends BaseSpec {
 
       val expression = CronExpression(many(15, 25, 35), 10, *, *, tue)
 
-      val result = expression.nextOccurrence(from)
+      val Some(result) = expression.nextTriggerTime(from)
 
       result.getYear shouldEqual 2015
       result.getMonth.getValue shouldEqual 1
@@ -119,7 +119,7 @@ class ModelSpec extends BaseSpec {
 
       val expression = CronExpression(* / 5, *, *, *, *)
 
-      val result = expression.nextOccurrence(from)
+      val Some(result) = expression.nextTriggerTime(from)
 
       result.getYear shouldEqual 2015
       result.getMonth.getValue shouldEqual 1
@@ -128,6 +128,31 @@ class ModelSpec extends BaseSpec {
       result.getMinute shouldEqual 55
     }
 
+  }
+
+  "the single execution" should {
+
+    "return the single execution time if now is before the trigger time" in {
+      val triggerTime = LocalDateTime.of(2015, 1, 1, 14, 30, 0)
+      val singleTrigger = SingleExecution(triggerTime)
+
+      singleTrigger.nextTriggerTime(triggerTime.minusMinutes(1)) shouldEqual Some(triggerTime)
+    }
+    "return the single execution time if now is the same as the trigger time" in {
+      val triggerTime = LocalDateTime.of(2015, 1, 1, 14, 30, 0)
+      val singleTrigger = SingleExecution(triggerTime)
+
+      singleTrigger.nextTriggerTime(triggerTime) shouldEqual Some(triggerTime)
+    }
+
+
+
+    "return none if the trigger time has passed" in {
+      val triggerTime = LocalDateTime.of(2015, 1, 1, 14, 30, 0)
+      val singleTrigger = SingleExecution(triggerTime)
+
+      singleTrigger.nextTriggerTime(triggerTime.plusMinutes(1))
+    }
   }
 
 }

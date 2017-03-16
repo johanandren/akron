@@ -17,9 +17,23 @@
 package com.markatta.akron
 
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.{ChronoField, TemporalField}
 
 import scala.collection.immutable.Seq
 import scala.util.Try
+
+/**
+ * In lack of a better name, common base type for the classes that
+ * describes when to run a cron job
+ */
+sealed trait CronTrigger {
+
+  /** @return The time when it should run the next time after the 'now' timestamp,
+    *         or 'None' if it will never occur again.
+    */
+  private[akron] def nextTriggerTime(now: LocalDateTime): Option[LocalDateTime]
+}
 
 /**
  * Provides a simplified subset of the time expression part of the V7 cron expression standard.
@@ -74,12 +88,13 @@ object CronExpression {
 
 }
 
-case class CronExpression(
+@SerialVersionUID(1L)
+final case class CronExpression(
    minute: MinuteExpression,
    hour: HourExpression,
    dayOfMonth: DayOfMonthExpression,
    month: MonthExpression,
-   dayOfWeek: DayOfWeekExpression) {
+   dayOfWeek: DayOfWeekExpression) extends CronTrigger {
 
   {
     val validation = validationError
@@ -103,9 +118,7 @@ case class CronExpression(
    *
    * Could probably do something much more clever here.
    */
-  def nextOccurrence: LocalDateTime = nextOccurrence(LocalDateTime.now())
-
-  def nextOccurrence(from: LocalDateTime): LocalDateTime = {
+  def nextTriggerTime(from: LocalDateTime): Option[LocalDateTime] = {
     val everyMinute = Stream.iterate(from.withSecond(0).withNano(0))((time) =>
       time.plusMinutes(1)
     )
@@ -124,8 +137,7 @@ case class CronExpression(
         dayMatches(time) &&
         hour.matches(time.getHour) &&
         minute.matches(time.getMinute)
-    }.get
-
+    }
   }
 
 
@@ -144,7 +156,8 @@ sealed trait DayOfMonthExpression extends ExpressionCommons
 sealed trait MonthExpression extends ExpressionCommons
 sealed trait DayOfWeekExpression extends ExpressionCommons
 
-case class Exactly(n: Int)
+@SerialVersionUID(1L)
+final case class Exactly(n: Int)
   extends HourExpression
   with MinuteExpression
   with DayOfMonthExpression
@@ -157,8 +170,8 @@ case class Exactly(n: Int)
 
   override def toString: String = n.toString
 }
-
-case class Interval(every: Int)
+@SerialVersionUID(1L)
+final case class Interval(every: Int)
   extends HourExpression
   with MinuteExpression
   with DayOfMonthExpression
@@ -174,7 +187,12 @@ case class Interval(every: Int)
 object Many {
   def apply(n1: Int, ns: Int*): Many = new Many(n1 :: ns.toList)
 }
-case class Many(times: Seq[Int])
+
+/**
+ * A set of different time points, for example "0,15,45"
+ */
+@SerialVersionUID(1L)
+final case class Many(times: Seq[Int])
   extends HourExpression
   with MinuteExpression
   with DayOfMonthExpression
@@ -187,7 +205,11 @@ case class Many(times: Seq[Int])
   override def toString: String = times.mkString(",")
 }
 
-case class Ranged(times: Range)
+/**
+ * A range that is scoped by it's position/unit, for minute it would allow "0-59" for example.
+ */
+@SerialVersionUID(1L)
+final case class Ranged(times: Range)
   extends HourExpression
   with MinuteExpression
   with DayOfMonthExpression
@@ -200,6 +222,11 @@ case class Ranged(times: Range)
   override def toString: String = times.toString
 }
 
+/**
+ * All time points in the unit, the "*" in minute position would trigger each minute when the other
+ * units are matching
+ */
+@SerialVersionUID(1L)
 case object All
   extends HourExpression
   with MinuteExpression
@@ -212,4 +239,33 @@ case object All
   override def matches(n: Int): Boolean = true
 
   override def toString: String = "*"
+}
+
+
+object SingleExecution {
+
+  def apply(triggerTime: LocalDateTime): SingleExecution =
+    new SingleExecution(triggerTime.`with`(ChronoField.SECOND_OF_MINUTE, 0))
+}
+/**
+ * Execute something at one single point in time, do not repeat.
+ * @param triggerTime (seconds are actually ignored, the granularity is minute wise)
+ */
+@SerialVersionUID(1L)
+final class SingleExecution private (private val triggerTime: LocalDateTime) extends CronTrigger {
+
+  override def nextTriggerTime(now: LocalDateTime): Option[LocalDateTime] = {
+    val normalizedNow = now.`with`(ChronoField.SECOND_OF_MINUTE, 0)
+    if (triggerTime.isBefore(normalizedNow)) None
+    else Some(triggerTime)
+  }
+
+  override def hashCode(): Int = triggerTime.hashCode()
+
+  override def equals(obj: scala.Any): Boolean = obj match {
+    case other: SingleExecution => other.triggerTime.equals(this.triggerTime)
+    case _ => false
+  }
+
+  override def toString: String = DateTimeFormatter.ISO_DATE_TIME.format(triggerTime)
 }

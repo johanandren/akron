@@ -35,21 +35,25 @@ object CronTab {
     * will reply with a [[Scheduled]] message containing a UUID for the crontab entry,
     * If that actor terminates, the crontab entry will be removed
     */
-  case class Schedule(recipient: ActorRef, message: Any, when: CronExpression)
-  case class Scheduled(id: UUID, recipient: ActorRef, message: Any)
+  final case class Schedule(recipient: ActorRef, message: Any, when: CronExpression)
+  final case class Scheduled(id: UUID, recipient: ActorRef, message: Any)
 
   /** remove a scheduled job from the crontab, actor will reply with [[UnScheduled]] */
-  case class UnSchedule(id: UUID)
-  case class UnScheduled(id: UUID)
+  final case class UnSchedule(id: UUID)
+  final case class UnScheduled(id: UUID)
 
   /** Get a list of all the current jobs in the crontab, actor will reply with [[ListOfJobs]] */
   case object GetListOfJobs
-  case class ListOfJobs(jobs: Seq[Job])
+  final case class ListOfJobs(jobs: Seq[Job])
 
 
 
-  /** models a scheduled job */
-  case class Job(id: UUID, recipient: ActorRef, message: Any, when: CronExpression)
+  /**
+   * Models a scheduled job
+   * @param id A unique id identifying this job
+   */
+  @SerialVersionUID(2L)
+  case class Job(id: UUID, recipient: ActorRef, message: Any, when: CronTrigger)
 
 
   def props = Props(classOf[CronTab])
@@ -109,15 +113,15 @@ class CronTab extends Actor with ActorLogging {
   }
 
   def runJob(id: UUID): Unit = {
-    entries = entries.map {
+    entries = entries.flatMap {
       case Entry(job @ Job(`id`, recipient, message, expr), _) =>
         log.debug("Running job {} sending '{}' to [{}]", id, message, recipient.path)
         recipient ! message
         // offset the time one minute, so that we do not end up running this instance again
         val laterThanNow = moveIntoNextMinute(LocalDateTime.now())
-        Entry(job, job.when.nextOccurrence(laterThanNow))
+        job.when.nextTriggerTime(laterThanNow).map(when => Entry(job, when))
 
-      case itsAKeeper => itsAKeeper
+      case itsAKeeper => Some(itsAKeeper)
     }
   }
 
@@ -133,18 +137,20 @@ class CronTab extends Actor with ActorLogging {
     }
   }
 
-  def addJob(job: Job): Unit = {
-    entries = entries :+ Entry(job, job.when.nextOccurrence)
-  }
+  def addJob(job: Job): Unit =
+    job.when.nextTriggerTime(LocalDateTime.now()).fold(
+      log.warning("Tried to add job {}", job)
+    )(when =>
+      entries = entries :+ Entry(job, when)
+    )
 
   def updateNext(): Unit = {
     entries = entries.sortBy(_.nextExecutionTime)
     // one or more jobs next up
-    val nextUp: Seq[Entry] = {
+    val nextUp: Seq[Entry] =
       entries.headOption.fold(Vector.empty[Entry])(earliest =>
         entries.takeWhile(_.nextExecutionTime == earliest.nextExecutionTime)
       )
-    }
 
     nextTrigger.foreach(_.cancel())
     if (nextUp.nonEmpty) {
