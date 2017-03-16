@@ -45,5 +45,16 @@ if terminated will remove all jobs sending messages to it.
 `CronTab.GetListOfJobs` can be used to get a `CronTab.ListOfJobs` back with all current crontab jobs.
 
 
+## Changelog
+
+### 1.1 
+
+ * Order of hour and minute not according to "normal" cron expressions fixed
+ 
+### 1.0
+ 
+ * First release - all the things 
+ 
+
 ## License
 Apache License, Version 2.0
