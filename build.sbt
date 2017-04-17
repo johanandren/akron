@@ -2,6 +2,7 @@ import _root_.sbtrelease.ReleasePlugin.ReleaseKeys
 import _root_.sbtrelease.ReleasePlugin._
 import _root_.xerial.sbt.Sonatype._
 import de.heikoseeberger.sbtheader.license.Apache2_0
+import sbtprotobuf.ProtobufPlugin
 
 name := "akron"
 organization := "com.markatta"
@@ -10,18 +11,26 @@ scalaVersion := "2.11.7"
 lazy val akkaVersion = "2.4.17"
 
 libraryDependencies ++= Seq(
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5",
-  "com.typesafe.akka" %% "akka-actor" % akkaVersion,
-  "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-  "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test"
+  "org.scala-lang.modules"      %% "scala-parser-combinators"  % "1.0.5",
+  "com.typesafe.akka"           %% "akka-actor"                % akkaVersion,
+  "com.typesafe.akka"           %% "akka-persistence"          % akkaVersion % "optional",
+  "org.scalatest"               %% "scalatest"                 % "2.2.4"     % "test",
+  "com.typesafe.akka"           %% "akka-testkit"              % akkaVersion % "test",
+  "org.iq80.leveldb"            % "leveldb"                    % "0.7"       % "test",
+  "org.fusesource.leveldbjni"   % "leveldbjni-all"             % "1.8"       % "test"
 )
 
+fork in Test := true // needed because of leveldbjni
 fork in run := true
 connectInput in run := true
 
 headers := Map(
   "scala" -> Apache2_0("2015", "Johan Andrén")
 )
+
+
+ProtobufPlugin.protobufSettings
+
 
 // releasing
 releaseSettings

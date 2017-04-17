@@ -16,13 +16,11 @@
 
 package com.markatta.akron
 
-import java.time.LocalDateTime
-import java.util.{TimerTask, Timer, UUID}
+import java.util.UUID
 
 import akka.actor._
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration.FiniteDuration
 
 /**
  * The simple crontab actor looses its state upon stop, does not remember what jobs
@@ -53,7 +51,7 @@ object CronTab {
    * @param id A unique id identifying this job
    */
   @SerialVersionUID(2L)
-  case class Job(id: UUID, recipient: ActorRef, message: Any, when: CronTrigger)
+  final case class Job(id: UUID, recipient: ActorRef, message: Any, when: CronTrigger)
 
 
   def props = Props(classOf[CronTab])
@@ -61,19 +59,9 @@ object CronTab {
 
 
 
-class CronTab extends Actor with ActorLogging {
+class CronTab extends Actor with AbstractCronTab with ActorLogging {
 
   import CronTab._
-  import TimeUtils._
-
-  case class Trigger(ids: Seq[UUID])
-
-  case class Entry(job: Job, nextExecutionTime: LocalDateTime)
-
-  var entries: Vector[Entry] = Vector()
-  var nextTrigger: Option[TriggerTask] = None
-
-  var timer = new Timer(self.path.name)
 
   override def receive: Receive = {
 
@@ -87,7 +75,6 @@ class CronTab extends Actor with ActorLogging {
       addJob(Job(id, recipient, message, when))
       updateNext()
       sender() ! Scheduled(id, recipient, message)
-
 
     case Trigger(ids) =>
       log.info(s"Triggering scheduled job(s) $ids")
@@ -112,82 +99,4 @@ class CronTab extends Actor with ActorLogging {
 
   }
 
-  def runJob(id: UUID): Unit = {
-    entries = entries.flatMap {
-      case Entry(job @ Job(`id`, recipient, message, expr), _) =>
-        log.debug("Running job {} sending '{}' to [{}]", id, message, recipient.path)
-        recipient ! message
-        // offset the time one minute, so that we do not end up running this instance again
-        val laterThanNow = moveIntoNextMinute(LocalDateTime.now())
-        job.when.nextTriggerTime(laterThanNow).map(when => Entry(job, when))
-
-      case itsAKeeper => Some(itsAKeeper)
-    }
-  }
-
-  def removeJob(id: UUID): Unit ={
-    entries.find(_.job.id == id).foreach { entry =>
-      entries = entries.filterNot(_ == entry)
-
-      // make sure we don't monitor lifecycle of actors we don't have
-      // jobs for
-      if (!entries.exists(_.job.recipient == entry.job.recipient)) {
-        context.unwatch(entry.job.recipient)
-      }
-    }
-  }
-
-  def addJob(job: Job): Unit =
-    job.when.nextTriggerTime(LocalDateTime.now()).fold(
-      log.warning("Tried to add job {}", job)
-    )(when =>
-      entries = entries :+ Entry(job, when)
-    )
-
-  def updateNext(): Unit = {
-    entries = entries.sortBy(_.nextExecutionTime)
-    // one or more jobs next up
-    val nextUp: Seq[Entry] =
-      entries.headOption.fold(Vector.empty[Entry])(earliest =>
-        entries.takeWhile(_.nextExecutionTime == earliest.nextExecutionTime)
-      )
-
-    nextTrigger.foreach(_.cancel())
-    if (nextUp.nonEmpty) {
-      val nextTime = nextUp.head.nextExecutionTime
-      val now = LocalDateTime.now()
-      val ids = nextUp.map(_.job.id)
-      nextTrigger =
-        if (nextTime.isBefore(now) || nextTime.isEqual(now)) {
-          // oups, we missed it, trigger right away
-          log.warning("Missed execution of {} at {}, triggering right away", ids, nextTime)
-          self ! Trigger(ids)
-          None
-        } else {
-          val offsetFromNow = durationBetween(now, nextTime)
-          log.debug("Next jobs up {} will run at {}, which is in {}s", ids, nextTime, offsetFromNow.toSeconds)
-          Some(schedule(offsetFromNow, self, Trigger(ids)))
-        }
-    }
-  }
-
-  // for testability
-  def schedule(offsetFromNow: FiniteDuration, recipient: ActorRef, message: Any): TriggerTask = {
-    assert(offsetFromNow.toMillis > 0)
-    val task = new TriggerTask(message)
-    timer.schedule(task, offsetFromNow.toMillis)
-    task
-  }
-
-
-  def jobAlreadyExists(recipient: ActorRef, message: Any, when: CronExpression): Boolean =
-    entries.exists(e => e.job.recipient == recipient && e.job.message == message && e.job.when == when)
-
-  override def postStop(): Unit = {
-    timer.cancel()
-  }
-
-  class TriggerTask(msg: Any) extends TimerTask {
-    override def run(): Unit = self ! msg
-  }
 }
