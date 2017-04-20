@@ -3,3 +3,8 @@ scala:
   - 2.11.6
 jdk:
   - oraclejdk8
+
+addons:
+  apt:
+    packages:
+    - protobuf-compiler
