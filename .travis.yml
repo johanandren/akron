@@ -1,10 +1,20 @@
 language: scala
 scala:
-  - 2.11.6
+  - 2.11.11
 jdk:
   - oraclejdk8
 
-addons:
-  apt:
-    packages:
-    - protobuf-compiler
+install:
+ - wget https://protobuf.googlecode.com/files/protobuf-2.4.1.tar.gz
+ - tar -xzvf protobuf-2.4.1.tar.gz
+ - cd protobuf-2.4.1
+ - ./configure --prefix=/usr
+ - make
+ - make check
+ - sudo make install
+
+# These directories are cached to S3 at the end of the build
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt

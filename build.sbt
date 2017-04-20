@@ -6,7 +6,7 @@ import sbtprotobuf.ProtobufPlugin
 
 name := "akron"
 organization := "com.markatta"
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.11"
 
 lazy val akkaVersion = "2.4.17"
 
@@ -30,7 +30,7 @@ headers := Map(
 
 
 ProtobufPlugin.protobufSettings
-
+version in ProtobufPlugin.protobufConfig := "2.4.1"
 
 // releasing
 releaseSettings
