@@ -2,7 +2,6 @@ import _root_.sbtrelease.ReleasePlugin.ReleaseKeys
 import _root_.sbtrelease.ReleasePlugin._
 import _root_.xerial.sbt.Sonatype._
 import de.heikoseeberger.sbtheader.license.Apache2_0
-import sbtprotobuf.ProtobufPlugin
 
 name := "akron"
 organization := "com.markatta"
@@ -20,6 +19,8 @@ libraryDependencies ++= Seq(
   "org.fusesource.leveldbjni"   % "leveldbjni-all"             % "1.8"       % "test"
 )
 
+Protobuf.settings
+
 fork in Test := true // needed because of leveldbjni
 fork in run := true
 connectInput in run := true
@@ -27,10 +28,6 @@ connectInput in run := true
 headers := Map(
   "scala" -> Apache2_0("2015", "Johan Andrén")
 )
-
-
-ProtobufPlugin.protobufSettings
-version in ProtobufPlugin.protobufConfig := "2.4.1"
 
 // releasing
 releaseSettings

@@ -1,4 +1,3 @@
-addSbtPlugin("com.github.gseitz" % "sbt-protobuf" % "0.5.5")
 addSbtPlugin("de.heikoseeberger" % "sbt-header" % "1.3.1")
 
 // releasing
