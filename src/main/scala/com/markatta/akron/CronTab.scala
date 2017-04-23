@@ -78,7 +78,7 @@ class CronTab extends Actor with AbstractCronTab with ActorLogging {
 
     case Trigger(ids) =>
       log.info(s"Triggering scheduled job(s) $ids")
-      ids.foreach(runJob)
+      ids.foreach { case (uuid, _) => runJob(uuid) }
       updateNext()
 
     case Terminated(actor) =>

@@ -9,6 +9,7 @@ import java.util.UUID
 import akka.actor.{ActorPath, ActorRef, ExtendedActorSystem}
 import akka.serialization.{BaseSerializer, SerializationExtension, SerializerWithStringManifest}
 import com.google.protobuf.ByteString
+import com.markatta.akron.Akron.RecentExecution
 import com.markatta.akron.CronTab.Job
 
 import scala.concurrent.Await
@@ -107,6 +108,9 @@ final class AkronSerializer(override val system: ExtendedActorSystem) extends Se
     s.jobs.foreach { job =>
       b.addJobs(jobToBuilder(job))
     }
+    s.recentExecutions.foreach { t =>
+      b.addRecentExecutions(tupleToRecentExecution(t))
+    }
     b.build().toByteArray
   }
 
@@ -183,7 +187,11 @@ final class AkronSerializer(override val system: ExtendedActorSystem) extends Se
   private def timestampToLong(timestamp: LocalDateTime) =
     timestamp.toEpochSecond(ZoneOffset.UTC)
 
-
+  private def tupleToRecentExecution(t: (UUID, LocalDateTime)): Akron.RecentExecution =
+    Akron.RecentExecution.newBuilder()
+      .setId(t._1.toString)
+      .setTimestamp(timestampToLong(t._2))
+      .build()
 
 
   // deserializers
@@ -208,7 +216,8 @@ final class AkronSerializer(override val system: ExtendedActorSystem) extends Se
   private def snapshotFromBytes(bytes: Array[Byte]): PersistentCrontab.ScheduleSnapshot = {
     val ss = Akron.ScheduleSnapshot.parseFrom(bytes)
     PersistentCrontab.ScheduleSnapshot(
-      ss.getJobsList.asScala.map(jobFromProto).toVector
+      ss.getJobsList.asScala.map(jobFromProto).toVector,
+      ss.getRecentExecutionsList.asScala.map(tupleFromRecentExecution).toVector
     )
   }
 
@@ -274,4 +283,7 @@ final class AkronSerializer(override val system: ExtendedActorSystem) extends Se
     Await.result(
       system.actorSelection(ActorPath.fromString(ref)).resolveOne(5.seconds),
       5.seconds)
+
+  private def tupleFromRecentExecution(re: RecentExecution): (UUID, LocalDateTime) =
+    (UUID.fromString(re.getId), timestampFromLong(re.getTimestamp))
 }

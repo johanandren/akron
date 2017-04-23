@@ -4,10 +4,14 @@
 package com.markatta.akron
 
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 import akka.actor.{ActorLogging, Props, Terminated}
 import akka.persistence.{PersistentActor, RecoveryCompleted}
+
+import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 object PersistentCrontab {
   // same protocol as non-persistent crontab
@@ -15,7 +19,8 @@ object PersistentCrontab {
   import CronTab.Job
   private[akron] case class JobScheduled(job: Job, timestamp: LocalDateTime, who:String)
   private[akron] case class JobRemoved(id: UUID, timestamp: LocalDateTime, who: String)
-  private[akron] case class ScheduleSnapshot(jobs: Vector[Job])
+  private[akron] case class JobTriggered(id: UUID, timestamp: LocalDateTime)
+  private[akron] case class ScheduleSnapshot(jobs: Vector[Job], recentExecutions: Seq[(UUID, LocalDateTime)])
 
   def props(): Props = props("akron-crontab")
 
@@ -30,8 +35,16 @@ class PersistentCrontab(_id: String) extends PersistentActor with ActorLogging w
   import CronTab._
   import PersistentCrontab._
   object MakeSnapshot
+  object CleanupTick
 
   override def persistenceId: String = _id
+
+  def keepRecentExecutionsFor: FiniteDuration = 24.hours
+
+  import context.dispatcher
+  context.system.scheduler.schedule(1.hour, 1.hour, self, CleanupTick)
+
+  private var recentExecutions = Seq.empty[(UUID, LocalDateTime)]
 
   override def receiveRecover: Receive = {
     case JobScheduled(job, _, _) =>
@@ -42,8 +55,12 @@ class PersistentCrontab(_id: String) extends PersistentActor with ActorLogging w
       log.debug("Persisted remove of id {}", id)
       removeJob(id)
 
-    case ScheduleSnapshot(jobs) =>
+    case JobTriggered(id, timestamp) =>
+      recentExecutions = recentExecutions :+ (id -> timestamp)
+
+    case ScheduleSnapshot(jobs, recentExecutionsSnap) =>
       jobs.foreach(addJob)
+      recentExecutions = recentExecutionsSnap
 
     case RecoveryCompleted =>
       updateNext()
@@ -61,15 +78,25 @@ class PersistentCrontab(_id: String) extends PersistentActor with ActorLogging w
       persist(JobScheduled(job, LocalDateTime.now(), sender().path.toString)) { scheduled =>
         log.info("Scheduling {} to send {} to {}, cron expression: {}", id, message, recipient.path, when)
         context.watch(recipient)
+        sender() ! Scheduled(id, recipient, message)
         addJob(scheduled.job)
         updateNext()
-        sender() ! Scheduled(id, recipient, message)
       }
 
-    case Trigger(ids) =>
-      log.info(s"Triggering scheduled job(s) $ids")
-      ids.foreach(runJob)
-      updateNext()
+    case Trigger(jobs) =>
+      log.info(s"Triggering scheduled job(s) $jobs")
+      var counter = 0
+      val events = jobs.filterNot(recentExecutions.contains)
+        .map { case (id, when) => JobTriggered(id, when) }
+      persistAll(events) { triggered =>
+        counter += 1
+        recentExecutions = jobs ++ recentExecutions
+        runJob(triggered.id)
+        if (counter == jobs.size) {
+          updateNext()
+          cleanUpRecentExecutions()
+        }
+      }
 
     case Terminated(actor) =>
       entries.filter(_.job.recipient == actor)
@@ -92,7 +119,11 @@ class PersistentCrontab(_id: String) extends PersistentActor with ActorLogging w
       sender() ! ListOfJobs(jobs)
 
     case MakeSnapshot =>
-      saveSnapshot(ScheduleSnapshot(jobs))
+      cleanUpRecentExecutions()
+      saveSnapshot(ScheduleSnapshot(jobs, recentExecutions))
+
+    case CleanupTick =>
+      cleanUpRecentExecutions()
   }
 
   def jobs = entries.map(_.job)
@@ -105,6 +136,11 @@ class PersistentCrontab(_id: String) extends PersistentActor with ActorLogging w
     } else {
       log.debug("Snapshotting of crontab disabled")
     }
+  }
+
+  def cleanUpRecentExecutions(): Unit = {
+    val deadline = LocalDateTime.now().minus(keepRecentExecutionsFor.toMinutes, ChronoUnit.MINUTES)
+    recentExecutions = recentExecutions.filter { case (_, timestamp) => timestamp.isAfter(deadline) }
   }
 
 }

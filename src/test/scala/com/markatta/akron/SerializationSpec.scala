@@ -45,6 +45,9 @@ class SerializationSpec extends TestKit(ActorSystem("SerializationSpec")) with W
           Vector(
             CronTab.Job(UUID.randomUUID(), dummySender, "message", CronExpression("* 10 * * *")),
             CronTab.Job(UUID.randomUUID(), dummySender, "message", CronExpression("20 * * * *"))
+          ),
+          Vector(
+            (UUID.randomUUID(), timestamp)
           )
         ),
         CronTab.GetListOfJobs,

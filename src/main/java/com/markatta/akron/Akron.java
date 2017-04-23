@@ -1912,6 +1912,652 @@ public final class Akron {
 
   }
 
+  public interface RecentExecutionOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:RecentExecution)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required string id = 1;</code>
+     */
+    boolean hasId();
+    /**
+     * <code>required string id = 1;</code>
+     */
+    java.lang.String getId();
+    /**
+     * <code>required string id = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getIdBytes();
+
+    /**
+     * <code>required int64 timestamp = 2;</code>
+     */
+    boolean hasTimestamp();
+    /**
+     * <code>required int64 timestamp = 2;</code>
+     */
+    long getTimestamp();
+  }
+  /**
+   * Protobuf type {@code RecentExecution}
+   */
+  public  static final class RecentExecution extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:RecentExecution)
+      RecentExecutionOrBuilder {
+    // Use RecentExecution.newBuilder() to construct.
+    private RecentExecution(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private RecentExecution() {
+      id_ = "";
+      timestamp_ = 0L;
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private RecentExecution(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000001;
+              id_ = bs;
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              timestamp_ = input.readInt64();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.markatta.akron.Akron.internal_static_RecentExecution_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.markatta.akron.Akron.internal_static_RecentExecution_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.markatta.akron.Akron.RecentExecution.class, com.markatta.akron.Akron.RecentExecution.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int ID_FIELD_NUMBER = 1;
+    private volatile java.lang.Object id_;
+    /**
+     * <code>required string id = 1;</code>
+     */
+    public boolean hasId() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string id = 1;</code>
+     */
+    public java.lang.String getId() {
+      java.lang.Object ref = id_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          id_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string id = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getIdBytes() {
+      java.lang.Object ref = id_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        id_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int TIMESTAMP_FIELD_NUMBER = 2;
+    private long timestamp_;
+    /**
+     * <code>required int64 timestamp = 2;</code>
+     */
+    public boolean hasTimestamp() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required int64 timestamp = 2;</code>
+     */
+    public long getTimestamp() {
+      return timestamp_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasId()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasTimestamp()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, id_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeInt64(2, timestamp_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, id_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, timestamp_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.markatta.akron.Akron.RecentExecution)) {
+        return super.equals(obj);
+      }
+      com.markatta.akron.Akron.RecentExecution other = (com.markatta.akron.Akron.RecentExecution) obj;
+
+      boolean result = true;
+      result = result && (hasId() == other.hasId());
+      if (hasId()) {
+        result = result && getId()
+            .equals(other.getId());
+      }
+      result = result && (hasTimestamp() == other.hasTimestamp());
+      if (hasTimestamp()) {
+        result = result && (getTimestamp()
+            == other.getTimestamp());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasId()) {
+        hash = (37 * hash) + ID_FIELD_NUMBER;
+        hash = (53 * hash) + getId().hashCode();
+      }
+      if (hasTimestamp()) {
+        hash = (37 * hash) + TIMESTAMP_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getTimestamp());
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.markatta.akron.Akron.RecentExecution parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.markatta.akron.Akron.RecentExecution parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.markatta.akron.Akron.RecentExecution parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.markatta.akron.Akron.RecentExecution parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.markatta.akron.Akron.RecentExecution parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.markatta.akron.Akron.RecentExecution parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.markatta.akron.Akron.RecentExecution parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static com.markatta.akron.Akron.RecentExecution parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.markatta.akron.Akron.RecentExecution parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.markatta.akron.Akron.RecentExecution parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.markatta.akron.Akron.RecentExecution prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code RecentExecution}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:RecentExecution)
+        com.markatta.akron.Akron.RecentExecutionOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.markatta.akron.Akron.internal_static_RecentExecution_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.markatta.akron.Akron.internal_static_RecentExecution_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.markatta.akron.Akron.RecentExecution.class, com.markatta.akron.Akron.RecentExecution.Builder.class);
+      }
+
+      // Construct using com.markatta.akron.Akron.RecentExecution.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        id_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        timestamp_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.markatta.akron.Akron.internal_static_RecentExecution_descriptor;
+      }
+
+      public com.markatta.akron.Akron.RecentExecution getDefaultInstanceForType() {
+        return com.markatta.akron.Akron.RecentExecution.getDefaultInstance();
+      }
+
+      public com.markatta.akron.Akron.RecentExecution build() {
+        com.markatta.akron.Akron.RecentExecution result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public com.markatta.akron.Akron.RecentExecution buildPartial() {
+        com.markatta.akron.Akron.RecentExecution result = new com.markatta.akron.Akron.RecentExecution(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.id_ = id_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.timestamp_ = timestamp_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.markatta.akron.Akron.RecentExecution) {
+          return mergeFrom((com.markatta.akron.Akron.RecentExecution)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.markatta.akron.Akron.RecentExecution other) {
+        if (other == com.markatta.akron.Akron.RecentExecution.getDefaultInstance()) return this;
+        if (other.hasId()) {
+          bitField0_ |= 0x00000001;
+          id_ = other.id_;
+          onChanged();
+        }
+        if (other.hasTimestamp()) {
+          setTimestamp(other.getTimestamp());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasId()) {
+          return false;
+        }
+        if (!hasTimestamp()) {
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.markatta.akron.Akron.RecentExecution parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (com.markatta.akron.Akron.RecentExecution) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object id_ = "";
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public boolean hasId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public java.lang.String getId() {
+        java.lang.Object ref = id_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            id_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getIdBytes() {
+        java.lang.Object ref = id_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          id_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public Builder setId(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        id_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public Builder clearId() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        id_ = getDefaultInstance().getId();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public Builder setIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        id_ = value;
+        onChanged();
+        return this;
+      }
+
+      private long timestamp_ ;
+      /**
+       * <code>required int64 timestamp = 2;</code>
+       */
+      public boolean hasTimestamp() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required int64 timestamp = 2;</code>
+       */
+      public long getTimestamp() {
+        return timestamp_;
+      }
+      /**
+       * <code>required int64 timestamp = 2;</code>
+       */
+      public Builder setTimestamp(long value) {
+        bitField0_ |= 0x00000002;
+        timestamp_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required int64 timestamp = 2;</code>
+       */
+      public Builder clearTimestamp() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        timestamp_ = 0L;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:RecentExecution)
+    }
+
+    // @@protoc_insertion_point(class_scope:RecentExecution)
+    private static final com.markatta.akron.Akron.RecentExecution DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.markatta.akron.Akron.RecentExecution();
+    }
+
+    public static com.markatta.akron.Akron.RecentExecution getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final com.google.protobuf.Parser<RecentExecution>
+        PARSER = new com.google.protobuf.AbstractParser<RecentExecution>() {
+      public RecentExecution parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new RecentExecution(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<RecentExecution> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<RecentExecution> getParserForType() {
+      return PARSER;
+    }
+
+    public com.markatta.akron.Akron.RecentExecution getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   public interface JobScheduledOrBuilder extends
       // @@protoc_insertion_point(interface_extends:JobScheduled)
       com.google.protobuf.MessageOrBuilder {
@@ -3602,6 +4248,30 @@ public final class Akron {
      */
     com.markatta.akron.Akron.JobOrBuilder getJobsOrBuilder(
         int index);
+
+    /**
+     * <code>repeated .RecentExecution recentExecutions = 2;</code>
+     */
+    java.util.List<com.markatta.akron.Akron.RecentExecution> 
+        getRecentExecutionsList();
+    /**
+     * <code>repeated .RecentExecution recentExecutions = 2;</code>
+     */
+    com.markatta.akron.Akron.RecentExecution getRecentExecutions(int index);
+    /**
+     * <code>repeated .RecentExecution recentExecutions = 2;</code>
+     */
+    int getRecentExecutionsCount();
+    /**
+     * <code>repeated .RecentExecution recentExecutions = 2;</code>
+     */
+    java.util.List<? extends com.markatta.akron.Akron.RecentExecutionOrBuilder> 
+        getRecentExecutionsOrBuilderList();
+    /**
+     * <code>repeated .RecentExecution recentExecutions = 2;</code>
+     */
+    com.markatta.akron.Akron.RecentExecutionOrBuilder getRecentExecutionsOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code ScheduleSnapshot}
@@ -3616,6 +4286,7 @@ public final class Akron {
     }
     private ScheduleSnapshot() {
       jobs_ = java.util.Collections.emptyList();
+      recentExecutions_ = java.util.Collections.emptyList();
     }
 
     @java.lang.Override
@@ -3655,6 +4326,15 @@ public final class Akron {
                   input.readMessage(com.markatta.akron.Akron.Job.PARSER, extensionRegistry));
               break;
             }
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                recentExecutions_ = new java.util.ArrayList<com.markatta.akron.Akron.RecentExecution>();
+                mutable_bitField0_ |= 0x00000002;
+              }
+              recentExecutions_.add(
+                  input.readMessage(com.markatta.akron.Akron.RecentExecution.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -3665,6 +4345,9 @@ public final class Akron {
       } finally {
         if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
           jobs_ = java.util.Collections.unmodifiableList(jobs_);
+        }
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          recentExecutions_ = java.util.Collections.unmodifiableList(recentExecutions_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -3717,6 +4400,41 @@ public final class Akron {
       return jobs_.get(index);
     }
 
+    public static final int RECENTEXECUTIONS_FIELD_NUMBER = 2;
+    private java.util.List<com.markatta.akron.Akron.RecentExecution> recentExecutions_;
+    /**
+     * <code>repeated .RecentExecution recentExecutions = 2;</code>
+     */
+    public java.util.List<com.markatta.akron.Akron.RecentExecution> getRecentExecutionsList() {
+      return recentExecutions_;
+    }
+    /**
+     * <code>repeated .RecentExecution recentExecutions = 2;</code>
+     */
+    public java.util.List<? extends com.markatta.akron.Akron.RecentExecutionOrBuilder> 
+        getRecentExecutionsOrBuilderList() {
+      return recentExecutions_;
+    }
+    /**
+     * <code>repeated .RecentExecution recentExecutions = 2;</code>
+     */
+    public int getRecentExecutionsCount() {
+      return recentExecutions_.size();
+    }
+    /**
+     * <code>repeated .RecentExecution recentExecutions = 2;</code>
+     */
+    public com.markatta.akron.Akron.RecentExecution getRecentExecutions(int index) {
+      return recentExecutions_.get(index);
+    }
+    /**
+     * <code>repeated .RecentExecution recentExecutions = 2;</code>
+     */
+    public com.markatta.akron.Akron.RecentExecutionOrBuilder getRecentExecutionsOrBuilder(
+        int index) {
+      return recentExecutions_.get(index);
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -3725,6 +4443,12 @@ public final class Akron {
 
       for (int i = 0; i < getJobsCount(); i++) {
         if (!getJobs(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getRecentExecutionsCount(); i++) {
+        if (!getRecentExecutions(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -3738,6 +4462,9 @@ public final class Akron {
       for (int i = 0; i < jobs_.size(); i++) {
         output.writeMessage(1, jobs_.get(i));
       }
+      for (int i = 0; i < recentExecutions_.size(); i++) {
+        output.writeMessage(2, recentExecutions_.get(i));
+      }
       unknownFields.writeTo(output);
     }
 
@@ -3749,6 +4476,10 @@ public final class Akron {
       for (int i = 0; i < jobs_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, jobs_.get(i));
+      }
+      for (int i = 0; i < recentExecutions_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, recentExecutions_.get(i));
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -3769,6 +4500,8 @@ public final class Akron {
       boolean result = true;
       result = result && getJobsList()
           .equals(other.getJobsList());
+      result = result && getRecentExecutionsList()
+          .equals(other.getRecentExecutionsList());
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -3783,6 +4516,10 @@ public final class Akron {
       if (getJobsCount() > 0) {
         hash = (37 * hash) + JOBS_FIELD_NUMBER;
         hash = (53 * hash) + getJobsList().hashCode();
+      }
+      if (getRecentExecutionsCount() > 0) {
+        hash = (37 * hash) + RECENTEXECUTIONS_FIELD_NUMBER;
+        hash = (53 * hash) + getRecentExecutionsList().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -3899,6 +4636,7 @@ public final class Akron {
         if (com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
           getJobsFieldBuilder();
+          getRecentExecutionsFieldBuilder();
         }
       }
       public Builder clear() {
@@ -3908,6 +4646,12 @@ public final class Akron {
           bitField0_ = (bitField0_ & ~0x00000001);
         } else {
           jobsBuilder_.clear();
+        }
+        if (recentExecutionsBuilder_ == null) {
+          recentExecutions_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
+        } else {
+          recentExecutionsBuilder_.clear();
         }
         return this;
       }
@@ -3940,6 +4684,15 @@ public final class Akron {
           result.jobs_ = jobs_;
         } else {
           result.jobs_ = jobsBuilder_.build();
+        }
+        if (recentExecutionsBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+            recentExecutions_ = java.util.Collections.unmodifiableList(recentExecutions_);
+            bitField0_ = (bitField0_ & ~0x00000002);
+          }
+          result.recentExecutions_ = recentExecutions_;
+        } else {
+          result.recentExecutions_ = recentExecutionsBuilder_.build();
         }
         onBuilt();
         return result;
@@ -4008,6 +4761,32 @@ public final class Akron {
             }
           }
         }
+        if (recentExecutionsBuilder_ == null) {
+          if (!other.recentExecutions_.isEmpty()) {
+            if (recentExecutions_.isEmpty()) {
+              recentExecutions_ = other.recentExecutions_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+            } else {
+              ensureRecentExecutionsIsMutable();
+              recentExecutions_.addAll(other.recentExecutions_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.recentExecutions_.isEmpty()) {
+            if (recentExecutionsBuilder_.isEmpty()) {
+              recentExecutionsBuilder_.dispose();
+              recentExecutionsBuilder_ = null;
+              recentExecutions_ = other.recentExecutions_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+              recentExecutionsBuilder_ = 
+                com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getRecentExecutionsFieldBuilder() : null;
+            } else {
+              recentExecutionsBuilder_.addAllMessages(other.recentExecutions_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
@@ -4016,6 +4795,11 @@ public final class Akron {
       public final boolean isInitialized() {
         for (int i = 0; i < getJobsCount(); i++) {
           if (!getJobs(i).isInitialized()) {
+            return false;
+          }
+        }
+        for (int i = 0; i < getRecentExecutionsCount(); i++) {
+          if (!getRecentExecutions(i).isInitialized()) {
             return false;
           }
         }
@@ -4279,6 +5063,246 @@ public final class Akron {
           jobs_ = null;
         }
         return jobsBuilder_;
+      }
+
+      private java.util.List<com.markatta.akron.Akron.RecentExecution> recentExecutions_ =
+        java.util.Collections.emptyList();
+      private void ensureRecentExecutionsIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          recentExecutions_ = new java.util.ArrayList<com.markatta.akron.Akron.RecentExecution>(recentExecutions_);
+          bitField0_ |= 0x00000002;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilderV3<
+          com.markatta.akron.Akron.RecentExecution, com.markatta.akron.Akron.RecentExecution.Builder, com.markatta.akron.Akron.RecentExecutionOrBuilder> recentExecutionsBuilder_;
+
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public java.util.List<com.markatta.akron.Akron.RecentExecution> getRecentExecutionsList() {
+        if (recentExecutionsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(recentExecutions_);
+        } else {
+          return recentExecutionsBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public int getRecentExecutionsCount() {
+        if (recentExecutionsBuilder_ == null) {
+          return recentExecutions_.size();
+        } else {
+          return recentExecutionsBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public com.markatta.akron.Akron.RecentExecution getRecentExecutions(int index) {
+        if (recentExecutionsBuilder_ == null) {
+          return recentExecutions_.get(index);
+        } else {
+          return recentExecutionsBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public Builder setRecentExecutions(
+          int index, com.markatta.akron.Akron.RecentExecution value) {
+        if (recentExecutionsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRecentExecutionsIsMutable();
+          recentExecutions_.set(index, value);
+          onChanged();
+        } else {
+          recentExecutionsBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public Builder setRecentExecutions(
+          int index, com.markatta.akron.Akron.RecentExecution.Builder builderForValue) {
+        if (recentExecutionsBuilder_ == null) {
+          ensureRecentExecutionsIsMutable();
+          recentExecutions_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          recentExecutionsBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public Builder addRecentExecutions(com.markatta.akron.Akron.RecentExecution value) {
+        if (recentExecutionsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRecentExecutionsIsMutable();
+          recentExecutions_.add(value);
+          onChanged();
+        } else {
+          recentExecutionsBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public Builder addRecentExecutions(
+          int index, com.markatta.akron.Akron.RecentExecution value) {
+        if (recentExecutionsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRecentExecutionsIsMutable();
+          recentExecutions_.add(index, value);
+          onChanged();
+        } else {
+          recentExecutionsBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public Builder addRecentExecutions(
+          com.markatta.akron.Akron.RecentExecution.Builder builderForValue) {
+        if (recentExecutionsBuilder_ == null) {
+          ensureRecentExecutionsIsMutable();
+          recentExecutions_.add(builderForValue.build());
+          onChanged();
+        } else {
+          recentExecutionsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public Builder addRecentExecutions(
+          int index, com.markatta.akron.Akron.RecentExecution.Builder builderForValue) {
+        if (recentExecutionsBuilder_ == null) {
+          ensureRecentExecutionsIsMutable();
+          recentExecutions_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          recentExecutionsBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public Builder addAllRecentExecutions(
+          java.lang.Iterable<? extends com.markatta.akron.Akron.RecentExecution> values) {
+        if (recentExecutionsBuilder_ == null) {
+          ensureRecentExecutionsIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, recentExecutions_);
+          onChanged();
+        } else {
+          recentExecutionsBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public Builder clearRecentExecutions() {
+        if (recentExecutionsBuilder_ == null) {
+          recentExecutions_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
+          onChanged();
+        } else {
+          recentExecutionsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public Builder removeRecentExecutions(int index) {
+        if (recentExecutionsBuilder_ == null) {
+          ensureRecentExecutionsIsMutable();
+          recentExecutions_.remove(index);
+          onChanged();
+        } else {
+          recentExecutionsBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public com.markatta.akron.Akron.RecentExecution.Builder getRecentExecutionsBuilder(
+          int index) {
+        return getRecentExecutionsFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public com.markatta.akron.Akron.RecentExecutionOrBuilder getRecentExecutionsOrBuilder(
+          int index) {
+        if (recentExecutionsBuilder_ == null) {
+          return recentExecutions_.get(index);  } else {
+          return recentExecutionsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public java.util.List<? extends com.markatta.akron.Akron.RecentExecutionOrBuilder> 
+           getRecentExecutionsOrBuilderList() {
+        if (recentExecutionsBuilder_ != null) {
+          return recentExecutionsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(recentExecutions_);
+        }
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public com.markatta.akron.Akron.RecentExecution.Builder addRecentExecutionsBuilder() {
+        return getRecentExecutionsFieldBuilder().addBuilder(
+            com.markatta.akron.Akron.RecentExecution.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public com.markatta.akron.Akron.RecentExecution.Builder addRecentExecutionsBuilder(
+          int index) {
+        return getRecentExecutionsFieldBuilder().addBuilder(
+            index, com.markatta.akron.Akron.RecentExecution.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .RecentExecution recentExecutions = 2;</code>
+       */
+      public java.util.List<com.markatta.akron.Akron.RecentExecution.Builder> 
+           getRecentExecutionsBuilderList() {
+        return getRecentExecutionsFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilderV3<
+          com.markatta.akron.Akron.RecentExecution, com.markatta.akron.Akron.RecentExecution.Builder, com.markatta.akron.Akron.RecentExecutionOrBuilder> 
+          getRecentExecutionsFieldBuilder() {
+        if (recentExecutionsBuilder_ == null) {
+          recentExecutionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
+              com.markatta.akron.Akron.RecentExecution, com.markatta.akron.Akron.RecentExecution.Builder, com.markatta.akron.Akron.RecentExecutionOrBuilder>(
+                  recentExecutions_,
+                  ((bitField0_ & 0x00000002) == 0x00000002),
+                  getParentForChildren(),
+                  isClean());
+          recentExecutions_ = null;
+        }
+        return recentExecutionsBuilder_;
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -8441,6 +9465,11 @@ public final class Akron {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_Job_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_RecentExecution_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_RecentExecution_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_JobScheduled_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -8498,18 +9527,20 @@ public final class Akron {
       "d\030\001 \002(\005\022\020\n\010manifest\030\002 \002(\t\022\017\n\007payload\030\003 \002" +
       "(\014\"X\n\003Job\022\n\n\002id\030\001 \002(\t\022\021\n\trecipient\030\002 \002(\t" +
       "\022\032\n\007message\030\003 \002(\0132\t.Envelope\022\026\n\016cronExpr" +
-      "ession\030\004 \002(\t\"A\n\014JobScheduled\022\021\n\003job\030\001 \002(" +
-      "\0132\004.Job\022\021\n\ttimestamp\030\002 \002(\003\022\013\n\003who\030\003 \001(\t\"" +
-      "8\n\nJobRemoved\022\n\n\002id\030\001 \002(\t\022\021\n\ttimestamp\030\002" +
-      " \002(\003\022\013\n\003who\030\003 \001(\t\"&\n\020ScheduleSnapshot\022\022\n" +
-      "\004jobs\030\001 \003(\0132\004.Job\"G\n\010Schedule\022\021\n\trecipie" +
-      "nt\030\001 \002(\t\022\032\n\007message\030\002 \002(\0132\t.Envelope\022\014\n\004",
-      "when\030\003 \002(\t\"E\n\010Sheduled\022\n\n\002id\030\001 \002(\t\022\021\n\tre" +
-      "cipient\030\002 \002(\t\022\032\n\007message\030\003 \002(\0132\t.Envelop" +
-      "e\"\030\n\nUnSchedule\022\n\n\002id\030\001 \002(\t\"\031\n\013UnSchedul" +
-      "ed\022\n\n\002id\030\001 \002(\t\"\017\n\rGetListOfJobs\" \n\nListO" +
-      "fJobs\022\022\n\004jobs\030\001 \003(\0132\004.JobB\026\n\022com.markatt" +
-      "a.akronH\001"
+      "ession\030\004 \002(\t\"0\n\017RecentExecution\022\n\n\002id\030\001 " +
+      "\002(\t\022\021\n\ttimestamp\030\002 \002(\003\"A\n\014JobScheduled\022\021" +
+      "\n\003job\030\001 \002(\0132\004.Job\022\021\n\ttimestamp\030\002 \002(\003\022\013\n\003" +
+      "who\030\003 \001(\t\"8\n\nJobRemoved\022\n\n\002id\030\001 \002(\t\022\021\n\tt" +
+      "imestamp\030\002 \002(\003\022\013\n\003who\030\003 \001(\t\"R\n\020ScheduleS" +
+      "napshot\022\022\n\004jobs\030\001 \003(\0132\004.Job\022*\n\020recentExe",
+      "cutions\030\002 \003(\0132\020.RecentExecution\"G\n\010Sched" +
+      "ule\022\021\n\trecipient\030\001 \002(\t\022\032\n\007message\030\002 \002(\0132" +
+      "\t.Envelope\022\014\n\004when\030\003 \002(\t\"E\n\010Sheduled\022\n\n\002" +
+      "id\030\001 \002(\t\022\021\n\trecipient\030\002 \002(\t\022\032\n\007message\030\003" +
+      " \002(\0132\t.Envelope\"\030\n\nUnSchedule\022\n\n\002id\030\001 \002(" +
+      "\t\"\031\n\013UnScheduled\022\n\n\002id\030\001 \002(\t\"\017\n\rGetListO" +
+      "fJobs\" \n\nListOfJobs\022\022\n\004jobs\030\001 \003(\0132\004.JobB" +
+      "\026\n\022com.markatta.akronH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -8535,56 +9566,62 @@ public final class Akron {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Job_descriptor,
         new java.lang.String[] { "Id", "Recipient", "Message", "CronExpression", });
-    internal_static_JobScheduled_descriptor =
+    internal_static_RecentExecution_descriptor =
       getDescriptor().getMessageTypes().get(2);
+    internal_static_RecentExecution_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_RecentExecution_descriptor,
+        new java.lang.String[] { "Id", "Timestamp", });
+    internal_static_JobScheduled_descriptor =
+      getDescriptor().getMessageTypes().get(3);
     internal_static_JobScheduled_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_JobScheduled_descriptor,
         new java.lang.String[] { "Job", "Timestamp", "Who", });
     internal_static_JobRemoved_descriptor =
-      getDescriptor().getMessageTypes().get(3);
+      getDescriptor().getMessageTypes().get(4);
     internal_static_JobRemoved_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_JobRemoved_descriptor,
         new java.lang.String[] { "Id", "Timestamp", "Who", });
     internal_static_ScheduleSnapshot_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(5);
     internal_static_ScheduleSnapshot_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_ScheduleSnapshot_descriptor,
-        new java.lang.String[] { "Jobs", });
+        new java.lang.String[] { "Jobs", "RecentExecutions", });
     internal_static_Schedule_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+      getDescriptor().getMessageTypes().get(6);
     internal_static_Schedule_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Schedule_descriptor,
         new java.lang.String[] { "Recipient", "Message", "When", });
     internal_static_Sheduled_descriptor =
-      getDescriptor().getMessageTypes().get(6);
+      getDescriptor().getMessageTypes().get(7);
     internal_static_Sheduled_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Sheduled_descriptor,
         new java.lang.String[] { "Id", "Recipient", "Message", });
     internal_static_UnSchedule_descriptor =
-      getDescriptor().getMessageTypes().get(7);
+      getDescriptor().getMessageTypes().get(8);
     internal_static_UnSchedule_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_UnSchedule_descriptor,
         new java.lang.String[] { "Id", });
     internal_static_UnScheduled_descriptor =
-      getDescriptor().getMessageTypes().get(8);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_UnScheduled_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_UnScheduled_descriptor,
         new java.lang.String[] { "Id", });
     internal_static_GetListOfJobs_descriptor =
-      getDescriptor().getMessageTypes().get(9);
+      getDescriptor().getMessageTypes().get(10);
     internal_static_GetListOfJobs_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_GetListOfJobs_descriptor,
         new java.lang.String[] { });
     internal_static_ListOfJobs_descriptor =
-      getDescriptor().getMessageTypes().get(10);
+      getDescriptor().getMessageTypes().get(11);
     internal_static_ListOfJobs_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_ListOfJobs_descriptor,

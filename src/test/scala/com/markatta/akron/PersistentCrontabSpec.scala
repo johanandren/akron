@@ -71,5 +71,27 @@ class PersistentCrontabSpec
         val (timing, where, what) = probe.expectMsgType[(FiniteDuration, ActorRef, Any)]
         where should equal (crontab)
       }
+
+      "not run a job that was run by a previous incarnation" in {
+        val id = uniqueId()
+        val probe = TestProbe()
+        val recipient = TestProbe()
+        val props = Props(new PersistentCrontab(id) {
+          override def schedule(offsetFromNow: FiniteDuration, recipient: ActorRef, message: Any): TriggerTask = {
+            probe.ref ! (offsetFromNow, recipient, message)
+            new TriggerTask
+          }
+        })
+        val crontab1 = system.actorOf(props)
+        crontab1 ! CronTab.Schedule(recipient.ref, "woo", CronExpression("* * * * *"))
+        expectMsgType[CronTab.Scheduled]
+
+        // will always be run because we just missed one
+        val (timing, where, what) = probe.expectMsgType[(FiniteDuration, ActorRef, Any)]
+        system.stop(crontab1)
+
+        val crontab2 = system.actorOf(props)
+        probe.expectNoMsg()
+      }
     }
 }

@@ -19,7 +19,10 @@ message Job {
     required string cronExpression = 4;
 }
 
-
+message RecentExecution {
+    required string id = 1;
+    required int64 timestamp = 2;
+}
 
 
 // top level persistent events
@@ -38,6 +41,7 @@ message JobRemoved {
 
 message ScheduleSnapshot {
     repeated Job jobs = 1;
+    repeated RecentExecution recentExecutions = 2;
 }
 
 // protocol for crontab (so it can be used in remotely/clustered)

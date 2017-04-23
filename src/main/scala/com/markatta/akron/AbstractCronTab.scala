@@ -18,7 +18,7 @@ trait AbstractCronTab { _: Actor with ActorLogging =>
 
   lazy val settings = new AkronSettings(context.system.settings.config)
 
-  protected final case class Trigger(ids: Seq[UUID])
+  protected final case class Trigger(ids: Seq[(UUID, LocalDateTime)])
   protected final case class Entry(job: Job, nextExecutionTime: LocalDateTime)
   protected final class TriggerTask(msg: Any) extends TimerTask {
     override def run(): Unit = self ! msg
@@ -44,7 +44,7 @@ trait AbstractCronTab { _: Actor with ActorLogging =>
     if (nextUp.nonEmpty) {
       val nextTime = nextUp.head.nextExecutionTime
       val now = LocalDateTime.now()
-      val ids = nextUp.map(_.job.id)
+      val ids = nextUp.map(entry => (entry.job.id, entry.nextExecutionTime))
       nextTrigger =
         if (nextTime.isBefore(now) || nextTime.isEqual(now)) {
           // oups, we missed it, trigger right away
