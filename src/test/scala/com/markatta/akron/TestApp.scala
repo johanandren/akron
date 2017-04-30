@@ -1,6 +1,7 @@
 package com.markatta.akron
 
 import akka.actor.ActorSystem
+import com.markatta.akron.CronTab.Schedule
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.Await

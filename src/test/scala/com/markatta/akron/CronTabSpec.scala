@@ -7,8 +7,9 @@ import org.scalatest.{ShouldMatchers, WordSpecLike}
 import scala.concurrent.duration.FiniteDuration
 
 class CronTabSpec
-  extends TestKit(ActorSystem("test"))
+  extends TestKit(ActorSystem("CronTabSpec"))
   with WordSpecLike
+  with ImplicitSender
   with ShouldMatchers {
 
   "the simple crontab actor" should {
@@ -25,6 +26,7 @@ class CronTabSpec
       }))
 
       crontab ! CronTab.Schedule(recipient.ref, "woo", CronExpression("* * * * *"))
+      expectMsgType[CronTab.Scheduled]
 
       val (timing, where, what) = probe.expectMsgType[(FiniteDuration, ActorRef, Any)]
       where should equal (crontab)
