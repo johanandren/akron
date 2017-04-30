@@ -13,7 +13,7 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules"      %% "scala-parser-combinators"  % "1.0.5",
   "com.typesafe.akka"           %% "akka-actor"                % akkaVersion,
   "com.typesafe.akka"           %% "akka-persistence"          % akkaVersion % "optional",
-  "org.scalatest"               %% "scalatest"                 % "2.2.4"     % "test",
+  "org.scalatest"               %% "scalatest"                 % "3.0.1"     % "test",
   "com.typesafe.akka"           %% "akka-testkit"              % akkaVersion % "test",
   "org.iq80.leveldb"            % "leveldb"                    % "0.7"       % "test",
   "org.fusesource.leveldbjni"   % "leveldbjni-all"             % "1.8"       % "test"

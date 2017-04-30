@@ -4,9 +4,9 @@
 package com.markatta.akron
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.testkit.{ImplicitSender, TestActor, TestKit, TestProbe}
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
-import org.scalatest.{ShouldMatchers, WordSpecLike}
+import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -24,7 +24,7 @@ class PersistentCrontabSpec
     """))
   ) with ImplicitSender
   with WordSpecLike
-  with ShouldMatchers {
+  with Matchers {
 
   def uniqueId() = "test" + System.nanoTime()
 
