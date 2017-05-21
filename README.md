@@ -5,13 +5,13 @@ Currently for running on a single node actor system.
 
 ## Requirements
 * Java 8
-* Akka 2.4
-* Scala 2.11
+* Akka 2.4 or 2.5
+* Scala 2.11 or 2.12
 
 ## How to use
 Add to your build sbt:
 ```Scala
-libraryDependencies += "com.markatta" %% "akron" % "1.1"
+libraryDependencies += "com.markatta" %% "akron" % "1.2"
 ```
 
 ## Usage example
@@ -46,6 +46,11 @@ if terminated will remove all jobs sending messages to it.
 
 
 ## Changelog
+
+### 1.2
+
+ * Artifacts for both Scala 2.11 and 2.12
+ * Alpha/preview of persistent crontab (serialization format may change in the future) which will allow for running for example a cluster singleton crontab that is resilient.
 
 ### 1.1 
 
