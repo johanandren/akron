@@ -1,5 +1,5 @@
 package com.markatta.akron
 
-import org.scalatest.{ShouldMatchers, WordSpec}
+import org.scalatest.{Matchers, WordSpec}
 
-abstract class BaseSpec extends WordSpec with ShouldMatchers
+abstract class BaseSpec extends WordSpec with Matchers

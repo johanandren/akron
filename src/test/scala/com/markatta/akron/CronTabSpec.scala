@@ -2,7 +2,7 @@ package com.markatta.akron
 
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.testkit._
-import org.scalatest.{ShouldMatchers, WordSpecLike}
+import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -10,7 +10,7 @@ class CronTabSpec
   extends TestKit(ActorSystem("CronTabSpec"))
   with WordSpecLike
   with ImplicitSender
-  with ShouldMatchers {
+  with Matchers {
 
   "the simple crontab actor" should {
 
