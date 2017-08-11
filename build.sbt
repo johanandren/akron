@@ -1,13 +1,8 @@
-import _root_.sbtrelease.ReleasePlugin.ReleaseKeys
-import _root_.sbtrelease.ReleasePlugin._
-import _root_.xerial.sbt.Sonatype._
-import de.heikoseeberger.sbtheader.license.Apache2_0
-
 name := "akron"
 organization := "com.markatta"
 scalaVersion := "2.11.11"
 
-lazy val akkaVersion = "2.4.17"
+lazy val akkaVersion = "2.4.19"
 
 libraryDependencies ++= Seq(
   "org.scala-lang.modules"      %% "scala-parser-combinators"  % "1.0.5",
@@ -25,14 +20,11 @@ fork in Test := true // needed because of leveldbjni
 fork in run := true
 connectInput in run := true
 
-headers := Map(
-  "scala" -> Apache2_0("2015", "Johan Andrén")
-)
+organizationName := "Johan Andrén"
+licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt"))
 
 // releasing
-releaseSettings
-sonatypeSettings
-ReleaseKeys.crossBuild := false
+releaseCrossBuild := false
 licenses := Seq("Apache License, Version 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
 homepage := Some(url("https://github.com/johanandren/akron"))
 publishMavenStyle := true

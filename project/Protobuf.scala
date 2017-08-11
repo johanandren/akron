@@ -1,7 +1,7 @@
 import sbt._
 import Keys._
 import sbt.{AutoPlugin, SettingKey, TaskKey}
-
+import scala.sys.process._
 
 object Protobuf {
 
@@ -20,7 +20,7 @@ object Protobuf {
       if (!outputPath.exists()) outputPath.mkdirs()
 
       // double check version
-      val res = Seq("protoc", "--version").lines.head
+      val res = Seq("protoc", "--version").lineStream.head
       val version = res.split(" ").last.trim
       val expectedVersion = protobufVersion.value
       if (version != expectedVersion) {
@@ -32,7 +32,7 @@ object Protobuf {
       val compile = Seq("protoc", s"-I${protoSources.absolutePath}", s"--java_out=${outputPath.absolutePath}") ++
         protofiles.map(_.getAbsolutePath)
       println(compile.mkString(","))
-      compile.lines(streams.value.log)
+      compile.lineStream(streams.value.log)
     }
 
   )
