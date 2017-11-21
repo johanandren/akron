@@ -93,6 +93,7 @@ class CronTab extends Actor with AbstractCronTab with ActorLogging {
       log.info("Unscheduling job {}", id)
       removeJob(id)
       updateNext()
+      sender() ! UnScheduled(id)
 
     case GetListOfJobs =>
       sender() ! ListOfJobs(entries.map(_.job))

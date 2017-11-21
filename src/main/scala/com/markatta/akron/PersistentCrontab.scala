@@ -78,9 +78,9 @@ class PersistentCrontab(_id: String) extends PersistentActor with ActorLogging w
       persist(JobScheduled(job, LocalDateTime.now(), sender().path.toString)) { scheduled =>
         log.info("Scheduling {} to send {} to {}, cron expression: {}", id, message, recipient.path, when)
         context.watch(recipient)
-        sender() ! Scheduled(id, recipient, message)
         addJob(scheduled.job)
         updateNext()
+        sender() ! Scheduled(id, recipient, message)
       }
 
     case Trigger(jobs) =>
@@ -113,6 +113,7 @@ class PersistentCrontab(_id: String) extends PersistentActor with ActorLogging w
         log.info("Unscheduling job {}", id)
         removeJob(id)
         updateNext()
+        sender() ! UnScheduled(id)
       }
 
     case GetListOfJobs =>
