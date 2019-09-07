@@ -3,7 +3,8 @@ language: scala
 sudo: false
 
 scala:
-  - 2.11.12
+  - "2.13.0"
+  - "2.12.8"
 
 before_install:
   # using jabba for custom jdk management
