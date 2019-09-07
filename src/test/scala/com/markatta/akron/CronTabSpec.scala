@@ -25,16 +25,18 @@ class CronTabSpec
       val probe = TestProbe[Any]()
       val recipient = TestProbe[String]()
 
+      val crontab = spawn(CronTab())
+
       system.receptionist ! Receptionist.register(MyKey, recipient.ref, probe.ref)
       probe.expectMessageType[Receptionist.Registered]
 
-      val crontab = spawn(CronTab())
+      system.receptionist ! Receptionist.Find(MyKey, probe.ref)
+      probe.expectMessage(Receptionist.Listing(MyKey, Set(recipient.ref.narrow)))
 
       crontab ! CronTab.Schedule("woo-every-second", MyKey, "woo", CronExpression("* * * * *"), probe.ref)
       probe.expectMessageType[CronTab.Scheduled[_]]
 
-      val (timing, where, what) = probe.receiveMessage()
-      where should equal (crontab)
+      recipient.expectMessageType[String] should === ("woo")
     }
   }
 }

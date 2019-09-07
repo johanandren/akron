@@ -30,6 +30,7 @@ import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.LoggerOps
 import akka.util.Timeout
 
 import scala.collection.immutable.Seq
@@ -75,7 +76,7 @@ object CronTab {
    */
   final case class Job[T](id: UUID, label: String, serviceKey: ServiceKey[T], message: T, when: CronTrigger)
 
-  private[akron] final case class Trigger(ids: Seq[(UUID, LocalDateTime)]) extends Command
+  private[akron] final case class Trigger(jobs: Seq[(UUID, LocalDateTime)]) extends Command
   private[akron] final case class Entry(job: Job[_], nextExecutionTime: LocalDateTime)
   private[akron] final class TriggerTask[T](msg: T, recipient: ActorRef[T]) extends TimerTask {
     override def run(): Unit = {
@@ -84,46 +85,48 @@ object CronTab {
   }
 
   private[akron] val keepRecentExecutionsFor = 24.hours
-  private[akron] final case class State(entries: Seq[Entry], recentExecutions: Seq[(UUID, LocalDateTime)]) {
+  private[akron] final case class State(
+    jobs: Seq[Job[_]],
+    upcomingExecutions: Seq[(UUID, LocalDateTime)],
+    recentExecutions: Seq[(UUID, LocalDateTime)]
+  ) {
+
     def jobAlreadyExists(serviceKey: ServiceKey[_], message: Any, when: CronExpression): Boolean =
-      entries.exists(e => e.job.serviceKey == serviceKey && e.job.message == message && e.job.when == when)
+      jobs.exists(job => job.serviceKey == serviceKey && job.message == message && job.when == when)
 
-    def addJob(job: Job[_]): State =
-      job.when.nextTriggerTime(LocalDateTime.now()) match {
-        case None =>
-          this // will never be executed
-        case Some(when) =>
-          copy(entries = entries :+ Entry(job, when))
-      }
+    def addJob(job: Job[_], firstTriggerTime: LocalDateTime): State =
+      copy(jobs = jobs :+ job, upcomingExecutions = upcomingExecutions :+ (job.id, firstTriggerTime))
 
-     def removeJob(id: UUID): State = {
-      entries.find(_.job.id == id) match {
-        case Some(entry) =>
-          val newEntries = entries.filterNot(_ == entry)
-
-          // FIXME make sure we don't monitor lifecycle of actors we don't have
-          // jobs for
-          if (!entries.exists(_.job.serviceKey == entry.job.serviceKey)) {
-            // context.unwatch(entry.job.recipient)
-          }
-          copy(entries = newEntries)
-
-        case None =>
-          this
-      }
-    }
+    def removeJob(id: UUID): State =
+      copy(
+        jobs.filterNot(_.id == id),
+        upcomingExecutions.filterNot(_._1 == id),
+        recentExecutions.filterNot(_._1 == id)
+      )
 
     def jobExecuted(id: UUID, when: LocalDateTime): State = {
-      copy(recentExecutions = recentExecutions :+ ((id, when)))
+      val newUpcoming = upcomingExecutions.find(_ == (id, when)) match {
+        case Some(upcoming) =>
+          // calculate next from the minute after this one
+          val maybeNext = jobs.find(_.id == id).get.when.nextTriggerTime(when.plusMinutes(1))
+          upcomingExecutions.filterNot(_ eq upcoming) ++ (maybeNext match {
+            case Some(next) => Seq((id, next))
+            case None => Seq.empty
+          })
+        case None =>
+          throw new IllegalStateException("jobExecuted called with a job that was never in the list of upcoming jobs")
+      }
+      copy(upcomingExecutions = newUpcoming, recentExecutions = recentExecutions :+ ((id, when)))
     }
 
-    def nextUp(): Seq[Entry] = {
-      val sortedEntries = entries.sortBy(_.nextExecutionTime)
+    def nextUp(): Seq[(UUID, LocalDateTime)] = {
+      import TimeUtils.ascTimeOrdering
+      val sortedEntries = upcomingExecutions.sortBy(_._2)
 
       sortedEntries.headOption match {
         case Some(earliest) =>
           // one or more jobs next up
-          sortedEntries.takeWhile(_.nextExecutionTime == earliest.nextExecutionTime)
+          sortedEntries.takeWhile(_._2 == earliest._2)
         case None => Nil
       }
     }
@@ -135,14 +138,15 @@ object CronTab {
 
   }
   private[akron] def emptyState = State(
-    entries = Seq.empty,
+    jobs = Seq.empty,
+    upcomingExecutions = Seq.empty,
     recentExecutions = Seq.empty
   )
 
   def create(): Behavior[Command] = apply()
 
   def apply(): Behavior[Command] = Behaviors.setup { context =>
-    context.log.debug("Akron non-persistent crontab starting up")
+    context.log.info("Akron non-persistent crontab starting up")
 
     new CronTab(context)
   }
@@ -159,32 +163,58 @@ private[akron] class CronTab(context: ActorContext[CronTab.Command]) extends Abs
 
   override def onMessage(cmd: Command): Behavior[Command] = cmd match {
     case Schedule(label, serviceKey, message, when, _) if state.jobAlreadyExists(serviceKey, message, when) =>
-      context.log.warn("Not scheduling job {} to send {} to {} since an identical job already exists", label, message, serviceKey)
+      context.log.warnN(
+        "Not scheduling job {} to send {} to {} since an identical job already exists",
+        label,
+        message,
+        serviceKey)
       this
 
     case Schedule(label, serviceKey, message, when, replyTo) =>
       val id = UUID.randomUUID()
-      context.log.info("Scheduling {} ({}) to send {} to {}, cron expression: {}", label, id, message, serviceKey, when)
-      state = state.addJob(Job(id, label, serviceKey, message, when))
+      val job = Job(id, label, serviceKey, message, when)
+      job.when.nextTriggerTime(LocalDateTime.now()) match {
+        case Some(firstTriggerTime) =>
+          context.log.infoN(
+            "Scheduling {} [{}] to send {} to {}, cron expression: [{}], first execution {}",
+            label,
+            id,
+            message,
+            serviceKey,
+            when,
+            firstTriggerTime
+          )
+          state = state.addJob(job, firstTriggerTime)
+        case None =>
+          context.log.warn("Not scheduling {} [{}] to send {} to {}, since cron expression: [{}] means there is no future execution time")
+      }
       updateNext()
       replyTo ! Scheduled(id, label, serviceKey, message)
       this
 
-    case Trigger(ids) =>
-      context.log.info(s"Triggering scheduled job(s) $ids")
-      ids.foreach { case (uuid, _) => runJob(uuid) }
+    case Trigger(jobs) =>
+      context.log.info(s"Triggering scheduled job(s) [{}]", jobs.mkString(", "))
+      val recent = state.recentExecutions.toSet
+      jobs.foreach { job =>
+        // make sure it wasn't already run
+        if (!recent(job)) {
+          val (uuid, when) = job
+          state = state.jobExecuted(uuid, when)
+          runJob(uuid)
+        }
+      }
       updateNext()
       this
 
     case UnSchedule(id, replyTo) =>
-      context.log.info("Unscheduling job {}", id)
+      context.log.info("Unscheduling job [{}]", id)
       state = state.removeJob(id)
       updateNext()
       replyTo ! UnScheduled(id)
       this
 
     case GetListOfJobs(replyTo) =>
-      replyTo ! ListOfJobs(state.entries.map(_.job))
+      replyTo ! ListOfJobs(state.jobs)
       this
 
   }
@@ -203,19 +233,18 @@ private[akron] class CronTab(context: ActorContext[CronTab.Command]) extends Abs
     val nextUp = state.nextUp()
     nextTrigger.foreach(_.cancel())
     if (nextUp.nonEmpty) {
-      val nextTime = nextUp.head.nextExecutionTime
+      val nextTime = nextUp.head._2
       val now = LocalDateTime.now()
-      val ids = nextUp.map(entry => (entry.job.id, entry.nextExecutionTime))
       nextTrigger =
         if (nextTime.isBefore(now) || nextTime.isEqual(now)) {
           // oups, we missed it, trigger right away
-          context.log.warn("Missed execution of {} at {}, triggering right away", ids, nextTime)
-          context.self ! Trigger(ids)
+          context.log.warnN("Missed execution of [{}] at {}, triggering right away", nextUp.mkString(", "), nextTime)
+          context.self ! Trigger(nextUp)
           None
         } else {
           val offsetFromNow = durationBetween(now, nextTime)
-          context.log.debug("Next jobs up {} will run at {}, which is in {}s", ids, nextTime, offsetFromNow.toSeconds)
-          Some(schedule(offsetFromNow, context.self, Trigger(ids)))
+          context.log.debugN("Next jobs up {} will run at {}, which is in {}s", nextUp, nextTime, offsetFromNow.toSeconds)
+          Some(schedule(offsetFromNow, context.self, Trigger(nextUp)))
         }
     }
   }
@@ -230,31 +259,51 @@ private[akron] class CronTab(context: ActorContext[CronTab.Command]) extends Abs
   }
 
   private def runJob(id: UUID): Unit = {
-    state.entries.flatMap {
-      case Entry(job @ Job(`id`, label, serviceKey, message, expr), _) =>
-        context.log.debug(s"Running job ${label} (${id}) sending '{}' to [{}]", message, serviceKey)
+    state.jobs.find(_.id == id) match {
+      case Some(job) =>
+        context.log.debugN(
+          "Requesting services for [{}] to run {} ({})",
+          job.serviceKey,
+          job.label,
+          id
+        )
         implicit val timeout: Timeout = 5.seconds
         import akka.actor.typed.scaladsl.AskPattern._
         implicit val scheduler = context.system.scheduler
-        implicit val ec = context.system.executionContext
+        implicit val ec = context.executionContext
         val logger = context.log
+        // FIXME message for this instead of ask + onComplete??
         context.system.receptionist.ask((replyTo: ActorRef[Receptionist.Listing]) =>
-          // FIXME message for this instead of onComplete??
-          Receptionist.find(serviceKey, replyTo)).onComplete {
-          case Success(serviceKey.Listing(refs)) =>
-            if (refs.isEmpty) logger.warn("No available services for {} when running job {} ({})", serviceKey, label, id)
+          Receptionist.Find(job.serviceKey, replyTo)
+        ).onComplete {
+          case Success(listing :Receptionist.Listing) =>
+            val refs = listing.allServiceInstances(job.serviceKey)
+            if (refs.isEmpty)
+              logger.warnN(
+                "No available services for {} when running job {} ({})",
+                job.serviceKey,
+                job.label,
+                id)
             else {
-              refs.foreach(_ ! message)
+              // we know the type is right though becasue of schedule type bound
+              logger.debugN(
+                "Sending message for {} ({}) to service after lookup, registered services [{}]",
+                job.label,
+                job.id,
+                refs.mkString(",")
+              )
+              refs.foreach(_.asInstanceOf[ActorRef[Any]] ! job.message)
             }
-          case Failure(ex) =>
-            logger.warn("Timeout waiting for available services for {} when running job {} ({})", serviceKey, label, id)
+          case Failure(_) =>
+            logger.warnN(
+              "Timeout waiting for available services for {} when running job {} ({})",
+              job.serviceKey,
+              job.label,
+              id)
         }
 
-        // offset the time one minute, so that we do not end up running this instance again
-        val laterThanNow = moveIntoNextMinute(LocalDateTime.now())
-        job.when.nextTriggerTime(laterThanNow).map(when => Entry(job, when))
-
-      case itsAKeeper => Some(itsAKeeper)
+      case None =>
+        // job was cancelled before we got to run it?
     }
   }
 

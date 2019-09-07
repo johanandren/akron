@@ -60,11 +60,11 @@ object PersistentCrontab {
         { (state, command) =>
           command match {
             case Schedule(label, serviceKey, message, when, _) if state.jobAlreadyExists(serviceKey, message, when) =>
-              context.log.warn("Not scheduling job {} to send {} to {} since an identical job already exists", label, message, serviceKey)
+              context.log.warn("Not scheduling job {} to send {} to {} since an identical job already exists", Array(label, message, serviceKey))
               Effect.none
             case Schedule(label, serviceKey, message, when, replyTo) =>
               val id = UUID.randomUUID()
-              context.log.info("Scheduling {} ({}) to send {} to {}, cron expression: {}", label, id, message, serviceKey, when)
+              context.log.info("Scheduling {} ({}) to send {} to {}, cron expression: {}", Array(label, id, message, serviceKey, when))
               val job = Job(id, label, serviceKey, message, when)
               Effect.persist(JobScheduled(job, LocalDateTime.now(), replyTo.path.toString)).thenRun { state =>
                 replyTo ! Scheduled(id, label, serviceKey, message)
@@ -86,14 +86,20 @@ object PersistentCrontab {
                 replyTo ! UnScheduled(id)
               }
             case GetListOfJobs(replyTo) =>
-              replyTo ! ListOfJobs(state.entries.map(_.job))
+              replyTo ! ListOfJobs(state.jobs)
               Effect.none
           }
         },
         { (state, event) =>
           val newState = event match {
             case JobScheduled(job, _, _) =>
-              state.addJob(job)
+              job.when.nextTriggerTime(LocalDateTime.now()) match {
+                case Some(nextExecutionTime) =>
+                  state.addJob(job, nextExecutionTime)
+                case None =>
+                  // FIXME we can ignore it, will never be executed again but behaving differently in event handler feels wrong
+                  state
+              }
             case JobRemoved(id, _, _) =>
               state.removeJob(id)
             case JobTriggered(id, when) =>
@@ -107,6 +113,7 @@ object PersistentCrontab {
           timer.cancel()
         case (_, RecoveryCompleted) =>
           // FIXME schedule next and missed events
+
       }.withRetention(RetentionCriteria.snapshotEvery(10, 3))
     }
   }

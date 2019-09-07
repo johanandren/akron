@@ -1,6 +1,12 @@
 package com.markatta.akron
-/*
-import akka.actor.ActorSystem
+
+import java.time.LocalDateTime
+
+import akka.actor.typed.ActorRef
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.receptionist.Receptionist
+import akka.actor.typed.receptionist.ServiceKey
+import akka.actor.typed.scaladsl.Behaviors
 import com.markatta.akron.CronTab.Schedule
 import com.typesafe.config.ConfigFactory
 
@@ -9,41 +15,39 @@ import scala.concurrent.duration.Duration
 import scala.io.StdIn
 import scala.util.{Failure, Success}
 
-*
+/**
  * Test app that can be run using sbt test:run to play around with scheduling message sends
- *
+ */
 object TestApp extends App {
+  trait Command
+  case class Message(text: String) extends Command
+  case class AddEntry(when: CronExpression, msg: String) extends Command
+
+  val MyServiceKey = ServiceKey[Message]("service")
+
+  val rootBehavior = Behaviors.setup[Command] { context =>
+    context.system.receptionist ! Receptionist.Register(MyServiceKey, context.self)
+
+    val crontab = context.spawn(CronTab(), "crontab")
+
+    Behaviors.receiveMessage {
+      case AddEntry(when, message) =>
+        crontab ! CronTab.Schedule(s"added-${LocalDateTime.now()}", MyServiceKey, Message(message), when, context.system.deadLetters)
+        Behaviors.same
+      case Message(msg) =>
+        println(s"Got message $msg")
+        Behaviors.same
+    }
+  }
 
   implicit val system = ActorSystem(
-    "test",
+    rootBehavior,
+    "TestApp",
     ConfigFactory.parseString("akka.log-dead-letters=off").withFallback(ConfigFactory.load())
   )
 
-  import akka.actor.ActorDSL._
-  val loggingActor = actor(new Act {
-    become {
-      case x => println("Message: " + x)
-    }
-  })
-
-  val crontab = system.actorOf(CronTab.props, "crontab")
-
-
-  println("""Write cron expressions to schedule "[m] [h] [d] [M] [dow] text-msg-to-send" (or 'quit' to quit).""")
-  val Pattern = """((?:\S+ ){5})(\S+)""".r
-  Stream
-    .continually(StdIn.readLine())
-    .takeWhile(str => str != "quit")
-    .foreach {
-      case Pattern(cronexpr, msg) =>
-        println(cronexpr.trim)
-        CronExpression.parse(cronexpr.trim) match {
-          case Success(expr) => crontab ! CronTab.Schedule(loggingActor, msg, expr)
-          case Failure(ex) => println("Invalid crontab expression")
-        }
-      case s => println(s"Invalid expression '$s'")
-    }
-
-  Await.result(system.terminate(), Duration.Inf)
+  system ! AddEntry(CronExpression.parse("* * * * *").get, "every minute")
+  system ! AddEntry(CronExpression.parse("*/2 * * * *").get, "every second minute")
+  system ! AddEntry(CronExpression.parse("*/5 * * * *").get, "every five minutes")
+  system ! AddEntry(CronExpression.parse("0 * * * *").get, "every hour")
 }
-*/
