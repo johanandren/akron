@@ -3,11 +3,15 @@
  */
 package com.markatta.akron
 
+
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
+import akka.actor.typed.Behavior
 import akka.actor.{ActorLogging, Props, Terminated}
+import akka.persistence.typed.PersistenceId
+import akka.persistence.typed.scaladsl.EventSourcedBehavior
 import akka.persistence.{PersistentActor, RecoveryCompleted}
 
 import scala.collection.immutable.Seq
@@ -17,19 +21,24 @@ object PersistentCrontab {
   // same protocol as non-persistent crontab
 
   import CronTab.Job
-  private[akron] case class JobScheduled(job: Job, timestamp: LocalDateTime, who:String)
+  private[akron] case class JobScheduled(job: Job[_], timestamp: LocalDateTime, who:String)
   private[akron] case class JobRemoved(id: UUID, timestamp: LocalDateTime, who: String)
   private[akron] case class JobTriggered(id: UUID, timestamp: LocalDateTime)
-  private[akron] case class ScheduleSnapshot(jobs: Vector[Job], recentExecutions: Seq[(UUID, LocalDateTime)])
-
+  private[akron] case class ScheduleSnapshot(jobs: Vector[Job[_]], recentExecutions: Seq[(UUID, LocalDateTime)])
+/*
   def props(): Props = props("akron-crontab")
 
   /**
    * @param id Persistent id to use for the crontab, only needed if you need multiple crontabs on the same actor system
    */
-  def props(id: String): Props = Props(new PersistentCrontab(id))
-}
+  def apply(id: PersistenceId): Behavior[CronTab.Command] = EventSourcedBehavior(
+    id,
 
+  )
+  def create(id: PersistenceId): Behavior[CronTab.Command] = apply(id)
+  */
+}
+/*
 class PersistentCrontab(_id: String) extends PersistentActor with ActorLogging with AbstractCronTab {
 
   import CronTab._
@@ -145,3 +154,4 @@ class PersistentCrontab(_id: String) extends PersistentActor with ActorLogging w
   }
 
 }
+*/

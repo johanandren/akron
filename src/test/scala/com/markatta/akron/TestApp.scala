@@ -1,5 +1,5 @@
 package com.markatta.akron
-
+/*
 import akka.actor.ActorSystem
 import com.markatta.akron.CronTab.Schedule
 import com.typesafe.config.ConfigFactory
@@ -9,9 +9,9 @@ import scala.concurrent.duration.Duration
 import scala.io.StdIn
 import scala.util.{Failure, Success}
 
-/**
+*
  * Test app that can be run using sbt test:run to play around with scheduling message sends
- */
+ *
 object TestApp extends App {
 
   implicit val system = ActorSystem(
@@ -46,3 +46,4 @@ object TestApp extends App {
 
   Await.result(system.terminate(), Duration.Inf)
 }
+*/

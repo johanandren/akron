@@ -2,7 +2,7 @@
  * Copyright (C) 2016 Lightbend Inc. <http://www.typesafe.com>
  */
 package com.markatta.akron
-
+/*
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
@@ -95,3 +95,4 @@ class PersistentCrontabSpec
       }
     }
 }
+*/

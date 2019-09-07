@@ -1,20 +1,22 @@
 name := "akron"
+version := "2.0-M1"
 organization := "com.markatta"
-scalaVersion := "2.11.11"
+scalaVersion := "2.13.0"
+crossScalaVersions := Seq("2.13.0", "2.12.8")
 
-lazy val akkaVersion = "2.4.19"
+lazy val akkaVersion = "2.6.0-M7"
 
 libraryDependencies ++= Seq(
-  "org.scala-lang.modules"      %% "scala-parser-combinators"  % "1.0.5",
-  "com.typesafe.akka"           %% "akka-actor"                % akkaVersion,
-  "com.typesafe.akka"           %% "akka-persistence"          % akkaVersion % "optional",
-  "org.scalatest"               %% "scalatest"                 % "3.0.1"     % "test",
-  "com.typesafe.akka"           %% "akka-testkit"              % akkaVersion % "test",
-  "org.iq80.leveldb"            % "leveldb"                    % "0.7"       % "test",
-  "org.fusesource.leveldbjni"   % "leveldbjni-all"             % "1.8"       % "test"
+  "org.scala-lang.modules"      %% "scala-parser-combinators"   % "1.1.2",
+  "com.typesafe.akka"           %% "akka-actor-typed"           % akkaVersion,
+  "com.typesafe.akka"           %% "akka-serialization-jackson" % akkaVersion,
+  "com.typesafe.akka"           %% "akka-persistence-typed"     % akkaVersion % Optional,
+  "ch.qos.logback"              % "logback-classic"             % "1.2.3"     % Test,
+  "org.scalatest"               %% "scalatest"                  % "3.0.8"     % Test,
+  "com.typesafe.akka"           %% "akka-actor-testkit-typed"   % akkaVersion % Test,
+  "org.iq80.leveldb"            % "leveldb"                     % "0.7"       % Test,
+  "org.fusesource.leveldbjni"   % "leveldbjni-all"              % "1.8"       % Test
 )
-
-Protobuf.settings
 
 fork in Test := true // needed because of leveldbjni
 fork in run := true

@@ -50,6 +50,7 @@ message Schedule {
     required string recipient = 1;
     required Envelope message = 2;
     required string when = 3;
+    required string replyTo = 4;
 }
 
 message Sheduled {
@@ -60,6 +61,7 @@ message Sheduled {
 
 message UnSchedule {
     required string id = 1;
+    required string replyTo = 2;
 }
 
 message UnScheduled {
@@ -67,6 +69,7 @@ message UnScheduled {
 }
 
 message GetListOfJobs {
+    required string replyTo = 1;
 }
 
 message ListOfJobs {
