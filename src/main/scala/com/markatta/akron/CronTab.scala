@@ -17,6 +17,7 @@
 package com.markatta.akron
 
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.TimerTask
 import java.util.UUID
 
@@ -24,14 +25,19 @@ import akka.actor.typed.ActorRef
 import akka.actor.typed.Behavior
 import akka.actor.typed.PostStop
 import akka.actor.typed.Signal
-import akka.actor.typed.Terminated
+import akka.actor.typed.receptionist.Receptionist
+import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
+import akka.util.Timeout
 
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
+import scala.util.Failure
+import scala.util.Success
+
 /**
  * The simple crontab actor looses its state upon stop, does not remember what jobs
  * has already been run. Only useful in a single actor system.
@@ -48,8 +54,8 @@ object CronTab {
     * will reply with a [[Scheduled]] message containing a UUID for the crontab entry,
     * If that actor terminates, the crontab entry will be removed
     */
-  final case class Schedule[T](recipient: ActorRef[T], message: T, when: CronExpression, replyTo: ActorRef[Scheduled[T]]) extends Command
-  final case class Scheduled[T](id: UUID, recipient: ActorRef[T], message: T)
+  final case class Schedule[T](entryLabel: String, serviceKey: ServiceKey[T], message: T, when: CronExpression, replyTo: ActorRef[Scheduled[T]]) extends Command
+  final case class Scheduled[T](id: UUID, entryLabel: String, serviceKey: ServiceKey[T], message: T)
 
   /** remove a scheduled job from the crontab, actor will reply with [[UnScheduled]] */
   final case class UnSchedule(id: UUID, replyTo: ActorRef[UnScheduled]) extends Command
@@ -61,11 +67,13 @@ object CronTab {
     def getJobs(): java.util.List[Job[_]] = jobs.asJava
   }
 
+  private[akron] case object CleanupTick extends Command
+
   /**
    * Models a scheduled job
    * @param id A unique id identifying this job
    */
-  final case class Job[T](id: UUID, recipient: ActorRef[T], message: T, when: CronTrigger)
+  final case class Job[T](id: UUID, label: String, serviceKey: ServiceKey[T], message: T, when: CronTrigger)
 
   private[akron] final case class Trigger(ids: Seq[(UUID, LocalDateTime)]) extends Command
   private[akron] final case class Entry(job: Job[_], nextExecutionTime: LocalDateTime)
@@ -75,6 +83,61 @@ object CronTab {
     }
   }
 
+  private[akron] val keepRecentExecutionsFor = 24.hours
+  private[akron] final case class State(entries: Seq[Entry], recentExecutions: Seq[(UUID, LocalDateTime)]) {
+    def jobAlreadyExists(serviceKey: ServiceKey[_], message: Any, when: CronExpression): Boolean =
+      entries.exists(e => e.job.serviceKey == serviceKey && e.job.message == message && e.job.when == when)
+
+    def addJob(job: Job[_]): State =
+      job.when.nextTriggerTime(LocalDateTime.now()) match {
+        case None =>
+          this // will never be executed
+        case Some(when) =>
+          copy(entries = entries :+ Entry(job, when))
+      }
+
+     def removeJob(id: UUID): State = {
+      entries.find(_.job.id == id) match {
+        case Some(entry) =>
+          val newEntries = entries.filterNot(_ == entry)
+
+          // FIXME make sure we don't monitor lifecycle of actors we don't have
+          // jobs for
+          if (!entries.exists(_.job.serviceKey == entry.job.serviceKey)) {
+            // context.unwatch(entry.job.recipient)
+          }
+          copy(entries = newEntries)
+
+        case None =>
+          this
+      }
+    }
+
+    def jobExecuted(id: UUID, when: LocalDateTime): State = {
+      copy(recentExecutions = recentExecutions :+ ((id, when)))
+    }
+
+    def nextUp(): Seq[Entry] = {
+      val sortedEntries = entries.sortBy(_.nextExecutionTime)
+
+      sortedEntries.headOption match {
+        case Some(earliest) =>
+          // one or more jobs next up
+          sortedEntries.takeWhile(_.nextExecutionTime == earliest.nextExecutionTime)
+        case None => Nil
+      }
+    }
+
+    def cleanupRecentExecutions(): State = {
+      val deadline = LocalDateTime.now().minus(keepRecentExecutionsFor.toMinutes, ChronoUnit.MINUTES)
+      copy(recentExecutions = recentExecutions.filter { case (_, timestamp) => timestamp.isAfter(deadline) })
+    }
+
+  }
+  private[akron] def emptyState = State(
+    entries = Seq.empty,
+    recentExecutions = Seq.empty
+  )
 
   def create(): Behavior[Command] = apply()
 
@@ -92,18 +155,19 @@ private[akron] class CronTab(context: ActorContext[CronTab.Command]) extends Abs
   import CronTab._
   import TimeUtils._
 
+  private var state = CronTab.emptyState
+
   override def onMessage(cmd: Command): Behavior[Command] = cmd match {
-    case Schedule(recipient, message, when, _) if jobAlreadyExists(recipient, message, when) =>
-      context.log.warn("Not scheduling job to send {} to {} since an identical job already exists", message, recipient)
+    case Schedule(label, serviceKey, message, when, _) if state.jobAlreadyExists(serviceKey, message, when) =>
+      context.log.warn("Not scheduling job {} to send {} to {} since an identical job already exists", label, message, serviceKey)
       this
 
-    case Schedule(recipient, message, when, replyTo) =>
+    case Schedule(label, serviceKey, message, when, replyTo) =>
       val id = UUID.randomUUID()
-      context.log.info("Scheduling {} to send {} to {}, cron expression: {}", id, message, recipient.path, when)
-      context.watch(recipient)
-      addJob(Job(id, recipient, message, when))
+      context.log.info("Scheduling {} ({}) to send {} to {}, cron expression: {}", label, id, message, serviceKey, when)
+      state = state.addJob(Job(id, label, serviceKey, message, when))
       updateNext()
-      replyTo ! Scheduled(id, recipient, message)
+      replyTo ! Scheduled(id, label, serviceKey, message)
       this
 
     case Trigger(ids) =>
@@ -114,49 +178,29 @@ private[akron] class CronTab(context: ActorContext[CronTab.Command]) extends Abs
 
     case UnSchedule(id, replyTo) =>
       context.log.info("Unscheduling job {}", id)
-      removeJob(id)
+      state = state.removeJob(id)
       updateNext()
       replyTo ! UnScheduled(id)
       this
 
     case GetListOfJobs(replyTo) =>
-      replyTo ! ListOfJobs(entries.map(_.job))
+      replyTo ! ListOfJobs(state.entries.map(_.job))
       this
 
   }
 
   override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
-    case Terminated(actor) =>
-      entries.filter(_.job.recipient == actor)
-        .foreach { entry =>
-          context.log.info("Removing entry {} because destination actor terminated", entry.job.id)
-          removeJob(entry.job.id)
-        }
-      updateNext()
-      this
-
     case PostStop =>
       timer.cancel()
       this
   }
 
-  lazy val settings = new AkronSettings(context.system.settings.config)
-
-  private var _entries = Vector[Entry]()
-  protected final def entries: Vector[Entry] = _entries
-
   private var nextTrigger: Option[TriggerTask[_]] = None
-
   private val timer = new java.util.Timer(context.self.path.toString)
 
   final def updateNext(): Unit = {
-    _entries = _entries.sortBy(_.nextExecutionTime)
     // one or more jobs next up
-    val nextUp: Seq[Entry] =
-      _entries.headOption.fold(Vector.empty[Entry])(earliest =>
-        _entries.takeWhile(_.nextExecutionTime == earliest.nextExecutionTime)
-      )
-
+    val nextUp = state.nextUp()
     nextTrigger.foreach(_.cancel())
     if (nextUp.nonEmpty) {
       val nextTime = nextUp.head.nextExecutionTime
@@ -185,18 +229,27 @@ private[akron] class CronTab(context: ActorContext[CronTab.Command]) extends Abs
     task
   }
 
-  private def addJob(job: Job[_]): Unit =
-    job.when.nextTriggerTime(LocalDateTime.now()).fold(
-      context.log.warn("Tried to add job {}", job)
-    )(when =>
-      _entries = _entries :+ Entry(job, when)
-    )
-
   private def runJob(id: UUID): Unit = {
-    _entries = _entries.flatMap {
-      case Entry(job @ Job(`id`, recipient, message, expr), _) =>
-        context.log.debug("Running job {} sending '{}' to [{}]", id, message, recipient.path)
-        recipient ! message
+    state.entries.flatMap {
+      case Entry(job @ Job(`id`, label, serviceKey, message, expr), _) =>
+        context.log.debug(s"Running job ${label} (${id}) sending '{}' to [{}]", message, serviceKey)
+        implicit val timeout: Timeout = 5.seconds
+        import akka.actor.typed.scaladsl.AskPattern._
+        implicit val scheduler = context.system.scheduler
+        implicit val ec = context.system.executionContext
+        val logger = context.log
+        context.system.receptionist.ask((replyTo: ActorRef[Receptionist.Listing]) =>
+          // FIXME message for this instead of onComplete??
+          Receptionist.find(serviceKey, replyTo)).onComplete {
+          case Success(serviceKey.Listing(refs)) =>
+            if (refs.isEmpty) logger.warn("No available services for {} when running job {} ({})", serviceKey, label, id)
+            else {
+              refs.foreach(_ ! message)
+            }
+          case Failure(ex) =>
+            logger.warn("Timeout waiting for available services for {} when running job {} ({})", serviceKey, label, id)
+        }
+
         // offset the time one minute, so that we do not end up running this instance again
         val laterThanNow = moveIntoNextMinute(LocalDateTime.now())
         job.when.nextTriggerTime(laterThanNow).map(when => Entry(job, when))
@@ -204,20 +257,5 @@ private[akron] class CronTab(context: ActorContext[CronTab.Command]) extends Abs
       case itsAKeeper => Some(itsAKeeper)
     }
   }
-
-  private def removeJob(id: UUID): Unit ={
-    _entries.find(_.job.id == id).foreach { entry =>
-      _entries = _entries.filterNot(_ == entry)
-
-      // make sure we don't monitor lifecycle of actors we don't have
-      // jobs for
-      if (!_entries.exists(_.job.recipient == entry.job.recipient)) {
-        context.unwatch(entry.job.recipient)
-      }
-    }
-  }
-
-  private def jobAlreadyExists(recipient: ActorRef[_], message: Any, when: CronExpression): Boolean =
-    entries.exists(e => e.job.recipient == recipient && e.job.message == message && e.job.when == when)
 
 }

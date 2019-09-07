@@ -5,38 +5,111 @@ package com.markatta.akron
 
 
 import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 import akka.actor.typed.Behavior
-import akka.actor.{ActorLogging, Props, Terminated}
+import akka.actor.typed.PostStop
+import akka.actor.typed.scaladsl.Behaviors
 import akka.persistence.typed.PersistenceId
+import akka.persistence.typed.RecoveryCompleted
+import akka.persistence.typed.scaladsl.Effect
 import akka.persistence.typed.scaladsl.EventSourcedBehavior
-import akka.persistence.{PersistentActor, RecoveryCompleted}
+import akka.persistence.typed.scaladsl.RetentionCriteria
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 object PersistentCrontab {
   // same protocol as non-persistent crontab
 
-  import CronTab.Job
-  private[akron] case class JobScheduled(job: Job[_], timestamp: LocalDateTime, who:String)
-  private[akron] case class JobRemoved(id: UUID, timestamp: LocalDateTime, who: String)
-  private[akron] case class JobTriggered(id: UUID, timestamp: LocalDateTime)
-  private[akron] case class ScheduleSnapshot(jobs: Vector[Job[_]], recentExecutions: Seq[(UUID, LocalDateTime)])
-/*
-  def props(): Props = props("akron-crontab")
+  import CronTab._
+
+  sealed trait Event
+  private[akron] case class JobScheduled(job: Job[_], timestamp: LocalDateTime, who:String) extends Event
+  private[akron] case class JobRemoved(id: UUID, timestamp: LocalDateTime, who: String) extends Event
+  private[akron] case class JobTriggered(id: UUID, timestamp: LocalDateTime) extends Event
 
   /**
+   * Java API:
+   */
+  def create(): Behavior[CronTab.Command] = apply()
+
+  /**
+   * Scala API:
+   */
+  def apply(): Behavior[CronTab.Command] = apply(PersistenceId("akron-crontab"))
+
+  /**
+   * Java API:
    * @param id Persistent id to use for the crontab, only needed if you need multiple crontabs on the same actor system
    */
-  def apply(id: PersistenceId): Behavior[CronTab.Command] = EventSourcedBehavior(
-    id,
-
-  )
   def create(id: PersistenceId): Behavior[CronTab.Command] = apply(id)
-  */
+
+  /**
+   * Scala API:
+   * @param id Persistent id to use for the crontab, only needed if you need multiple crontabs on the same actor system
+   */
+  def apply(id: PersistenceId): Behavior[CronTab.Command] = Behaviors.setup { context =>
+    Behaviors.withTimers { timers =>
+      context.log.info("Akron persistent crontab starting up")
+      timers.startTimerWithFixedDelay(CleanupTick, CleanupTick, 1.hour)
+      val timer = new java.util.Timer(context.self.path.toString)
+
+      EventSourcedBehavior[CronTab.Command, Event, State](
+        id,
+        emptyState,
+        { (state, command) =>
+          command match {
+            case Schedule(label, serviceKey, message, when, _) if state.jobAlreadyExists(serviceKey, message, when) =>
+              context.log.warn("Not scheduling job {} to send {} to {} since an identical job already exists", label, message, serviceKey)
+              Effect.none
+            case Schedule(label, serviceKey, message, when, replyTo) =>
+              val id = UUID.randomUUID()
+              context.log.info("Scheduling {} ({}) to send {} to {}, cron expression: {}", label, id, message, serviceKey, when)
+              val job = Job(id, label, serviceKey, message, when)
+              Effect.persist(JobScheduled(job, LocalDateTime.now(), replyTo.path.toString)).thenRun { state =>
+                replyTo ! Scheduled(id, label, serviceKey, message)
+              }
+            case Trigger(ids) =>
+              context.log.info(s"Triggering scheduled job(s) $ids")
+              Effect.persist(ids.map { case (uuid, stamp) => JobTriggered(uuid, stamp)})
+                .thenRun { state =>
+                  /*
+                  ids.foreach { case (uuid, _) =>
+                    // FIXME runJob(uuid)
+                  }
+                  updateNext()
+                  */
+                }
+            case UnSchedule(id, replyTo) =>
+              context.log.info("Unscheduling job {}", id)
+              Effect.persist(JobRemoved(id, LocalDateTime.now(), replyTo.path.toString)).thenRun { state =>
+                replyTo ! UnScheduled(id)
+              }
+            case GetListOfJobs(replyTo) =>
+              replyTo ! ListOfJobs(state.entries.map(_.job))
+              Effect.none
+          }
+        },
+        { (state, event) =>
+          val newState = event match {
+            case JobScheduled(job, _, _) =>
+              state.addJob(job)
+            case JobRemoved(id, _, _) =>
+              state.removeJob(id)
+            case JobTriggered(id, when) =>
+              state.jobExecuted(id, when)
+          }
+          // instead of spamming the journal with a tick event we cleanup every time state is cleaned up
+          newState.cleanupRecentExecutions()
+        }
+      ).receiveSignal {
+        case (_, PostStop) =>
+          timer.cancel()
+        case (_, RecoveryCompleted) =>
+          // FIXME schedule next and missed events
+      }.withRetention(RetentionCriteria.snapshotEvery(10, 3))
+    }
+  }
 }
 /*
 class PersistentCrontab(_id: String) extends PersistentActor with ActorLogging with AbstractCronTab {
