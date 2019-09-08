@@ -32,6 +32,7 @@ import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.LoggerOps
 import akka.util.Timeout
+import com.markatta.akron.TimeUtils.durationBetween
 
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
@@ -78,9 +79,9 @@ object CronTab {
 
   private[akron] final case class Trigger(jobs: Seq[(UUID, LocalDateTime)]) extends Command
   private[akron] final case class Entry(job: Job[_], nextExecutionTime: LocalDateTime)
-  private[akron] final class TriggerTask[T](msg: T, recipient: ActorRef[T]) extends TimerTask {
+  private[akron] final class TriggerTask(ids: Seq[(UUID, LocalDateTime)], recipient: ActorRef[Trigger]) extends TimerTask {
     override def run(): Unit = {
-      recipient ! msg
+      recipient ! Trigger(ids)
     }
   }
 
@@ -143,122 +144,7 @@ object CronTab {
     recentExecutions = Seq.empty
   )
 
-  def create(): Behavior[Command] = apply()
-
-  def apply(): Behavior[Command] = Behaviors.setup { context =>
-    context.log.info("Akron non-persistent crontab starting up")
-
-    new CronTab(context)
-  }
-
-}
-
-
-private[akron] class CronTab(context: ActorContext[CronTab.Command]) extends AbstractBehavior[CronTab.Command] {
-
-  import CronTab._
-  import TimeUtils._
-
-  private var state = CronTab.emptyState
-
-  override def onMessage(cmd: Command): Behavior[Command] = cmd match {
-    case Schedule(label, serviceKey, message, when, _) if state.jobAlreadyExists(serviceKey, message, when) =>
-      context.log.warnN(
-        "Not scheduling job {} to send {} to {} since an identical job already exists",
-        label,
-        message,
-        serviceKey)
-      this
-
-    case Schedule(label, serviceKey, message, when, replyTo) =>
-      val id = UUID.randomUUID()
-      val job = Job(id, label, serviceKey, message, when)
-      job.when.nextTriggerTime(LocalDateTime.now()) match {
-        case Some(firstTriggerTime) =>
-          context.log.infoN(
-            "Scheduling {} [{}] to send {} to {}, cron expression: [{}], first execution {}",
-            label,
-            id,
-            message,
-            serviceKey,
-            when,
-            firstTriggerTime
-          )
-          state = state.addJob(job, firstTriggerTime)
-        case None =>
-          context.log.warn("Not scheduling {} [{}] to send {} to {}, since cron expression: [{}] means there is no future execution time")
-      }
-      updateNext()
-      replyTo ! Scheduled(id, label, serviceKey, message)
-      this
-
-    case Trigger(jobs) =>
-      context.log.info(s"Triggering scheduled job(s) [{}]", jobs.mkString(", "))
-      val recent = state.recentExecutions.toSet
-      jobs.foreach { job =>
-        // make sure it wasn't already run
-        if (!recent(job)) {
-          val (uuid, when) = job
-          state = state.jobExecuted(uuid, when)
-          runJob(uuid)
-        }
-      }
-      updateNext()
-      this
-
-    case UnSchedule(id, replyTo) =>
-      context.log.info("Unscheduling job [{}]", id)
-      state = state.removeJob(id)
-      updateNext()
-      replyTo ! UnScheduled(id)
-      this
-
-    case GetListOfJobs(replyTo) =>
-      replyTo ! ListOfJobs(state.jobs)
-      this
-
-  }
-
-  override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
-    case PostStop =>
-      timer.cancel()
-      this
-  }
-
-  private var nextTrigger: Option[TriggerTask[_]] = None
-  private val timer = new java.util.Timer(context.self.path.toString)
-
-  final def updateNext(): Unit = {
-    // one or more jobs next up
-    val nextUp = state.nextUp()
-    nextTrigger.foreach(_.cancel())
-    if (nextUp.nonEmpty) {
-      val nextTime = nextUp.head._2
-      val now = LocalDateTime.now()
-      nextTrigger =
-        if (nextTime.isBefore(now) || nextTime.isEqual(now)) {
-          // oups, we missed it, trigger right away
-          context.log.warnN("Missed execution of [{}] at {}, triggering right away", nextUp.mkString(", "), nextTime)
-          context.self ! Trigger(nextUp)
-          None
-        } else {
-          val offsetFromNow = durationBetween(now, nextTime)
-          context.log.debugN("Next jobs up {} will run at {}, which is in {}s", nextUp, nextTime, offsetFromNow.toSeconds)
-          Some(schedule(offsetFromNow, context.self, Trigger(nextUp)))
-        }
-    }
-  }
-
-
-  // for testability
-  protected def schedule[T](offsetFromNow: FiniteDuration, recipient: ActorRef[T], message: T): TriggerTask[T] = {
-    assert(offsetFromNow.toMillis > 0)
-    val task = new TriggerTask[T](message, recipient)
-    timer.schedule(task, offsetFromNow.toMillis)
-    task
-  }
-
-  private def runJob(id: UUID): Unit = {
+  private[akron] def runJob(context: ActorContext[Command], state: State, id: UUID): Unit = {
     state.jobs.find(_.id == id) match {
       case Some(job) =>
         context.log.debugN(
@@ -272,7 +158,6 @@ private[akron] class CronTab(context: ActorContext[CronTab.Command]) extends Abs
         implicit val scheduler = context.system.scheduler
         implicit val ec = context.executionContext
         val logger = context.log
-        // FIXME message for this instead of ask + onComplete??
         context.system.receptionist.ask((replyTo: ActorRef[Receptionist.Listing]) =>
           Receptionist.Find(job.serviceKey, replyTo)
         ).onComplete {
@@ -305,6 +190,119 @@ private[akron] class CronTab(context: ActorContext[CronTab.Command]) extends Abs
       case None =>
         // job was cancelled before we got to run it?
     }
+  }
+
+  private[akron] def scheduleNext(context: ActorContext[Command], timer: java.util.Timer, state: State, currentNextTrigger: Option[TriggerTask]): Option[TriggerTask] = {
+    // one or more jobs next up
+    val nextUp = state.nextUp()
+    currentNextTrigger.foreach(_.cancel())
+    if (nextUp.nonEmpty) {
+      val nextTime = nextUp.head._2
+      val now = LocalDateTime.now()
+
+      if (nextTime.isBefore(now) || nextTime.isEqual(now)) {
+        // oups, we missed it, trigger right away
+        context.log.warnN("Missed execution of [{}] at {}, triggering right away", nextUp.mkString(", "), nextTime)
+        context.self ! Trigger(nextUp)
+        None
+      } else {
+        val offsetFromNow = durationBetween(now, nextTime)
+        context.log.debugN("Next jobs up {} will run at {}, which is in {}s", nextUp, nextTime, offsetFromNow.toSeconds)
+        val task = new TriggerTask(nextUp, context.self)
+        timer.schedule(task, offsetFromNow.toMillis)
+        Some(task)
+      }
+    } else None
+  }
+
+
+  // public factories
+
+  def create(): Behavior[Command] = apply()
+
+  def apply(): Behavior[Command] = Behaviors.setup { context =>
+    context.log.info("Akron non-persistent crontab starting up")
+
+    new CronTab(context)
+  }
+
+
+
+
+}
+
+
+private[akron] class CronTab(context: ActorContext[CronTab.Command]) extends AbstractBehavior[CronTab.Command] {
+
+  import CronTab._
+  import TimeUtils._
+
+  private var nextTrigger: Option[TriggerTask] = None
+  private val timer = new java.util.Timer(context.self.path.toString)
+  private var state = CronTab.emptyState
+
+  override def onMessage(cmd: Command): Behavior[Command] = cmd match {
+    case Schedule(label, serviceKey, message, when, _) if state.jobAlreadyExists(serviceKey, message, when) =>
+      context.log.warnN(
+        "Not scheduling job {} to send {} to {} since an identical job already exists",
+        label,
+        message,
+        serviceKey)
+      this
+
+    case Schedule(label, serviceKey, message, when, replyTo) =>
+      val id = UUID.randomUUID()
+      val job = Job(id, label, serviceKey, message, when)
+      job.when.nextTriggerTime(LocalDateTime.now()) match {
+        case Some(firstTriggerTime) =>
+          context.log.infoN(
+            "Scheduling {} [{}] to send {} to {}, cron expression: [{}], first execution {}",
+            label,
+            id,
+            message,
+            serviceKey,
+            when,
+            firstTriggerTime
+          )
+          state = state.addJob(job, firstTriggerTime)
+        case None =>
+          context.log.warn("Not scheduling {} [{}] to send {} to {}, since cron expression: [{}] means there is no future execution time")
+      }
+      nextTrigger = scheduleNext(context, timer, state, nextTrigger)
+      replyTo ! Scheduled(id, label, serviceKey, message)
+      this
+
+    case Trigger(jobs) =>
+      context.log.info(s"Triggering scheduled job(s) [{}]", jobs.mkString(", "))
+      val recent = state.recentExecutions.toSet
+      jobs.foreach { job =>
+        // make sure it wasn't already run
+        if (!recent(job)) {
+          val (uuid, when) = job
+          state = state.jobExecuted(uuid, when)
+          runJob(context, state, uuid)
+        }
+      }
+      nextTrigger = scheduleNext(context, timer, state, nextTrigger)
+      this
+
+    case UnSchedule(id, replyTo) =>
+      context.log.info("Unscheduling job [{}]", id)
+      state = state.removeJob(id)
+      nextTrigger = scheduleNext(context, timer, state, nextTrigger)
+      replyTo ! UnScheduled(id)
+      this
+
+    case GetListOfJobs(replyTo) =>
+      replyTo ! ListOfJobs(state.jobs)
+      this
+
+  }
+
+  override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
+    case PostStop =>
+      timer.cancel()
+      this
   }
 
 }
