@@ -32,6 +32,8 @@ import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.LoggerOps
 import akka.util.Timeout
+import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
+import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonSerialize}
 import com.markatta.akron.TimeUtils.durationBetween
 
 import scala.collection.immutable.Seq
@@ -75,7 +77,12 @@ object CronTab {
    * Models a scheduled job
    * @param id A unique id identifying this job
    */
-  final case class Job[T](id: UUID, label: String, serviceKey: ServiceKey[T], message: T, when: CronTrigger)
+  final case class Job[T](
+      id: UUID, label: String,
+      @JsonDeserialize(using = classOf[ServiceKeyDeserializer]) @JsonSerialize(using = classOf[ServiceKeySerializer]) serviceKey: ServiceKey[T],
+      message: T,
+      when: CronTrigger
+  )
 
   private[akron] final case class Trigger(jobs: Seq[(UUID, LocalDateTime)]) extends Command
   private[akron] final case class Entry(job: Job[_], nextExecutionTime: LocalDateTime)

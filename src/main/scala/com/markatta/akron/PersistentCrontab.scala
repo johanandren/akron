@@ -27,8 +27,8 @@ object PersistentCrontab {
   import CronTab._
 
   sealed trait Event
-  final case class JobScheduled(job: Job[_], timestamp: LocalDateTime, who:String) extends Event
-  final case class JobRemoved(id: UUID, timestamp: LocalDateTime, who: String) extends Event
+  final case class JobScheduled(job: Job[_]) extends Event
+  final case class JobRemoved(id: UUID) extends Event
   final case class JobTriggered(id: UUID, timestamp: LocalDateTime) extends Event
 
   /**
@@ -70,7 +70,7 @@ object PersistentCrontab {
               val id = UUID.randomUUID()
               context.log.infoN("Scheduling {} ({}) to send {} to {}, cron expression: {}", label, id, message, serviceKey, when)
               val job = Job(id, label, serviceKey, message, when)
-              Effect.persist(JobScheduled(job, LocalDateTime.now(), replyTo.path.toString)).thenRun { state =>
+              Effect.persist(JobScheduled(job)).thenRun { _ =>
                 replyTo ! Scheduled(id, label, serviceKey, message)
               }
             case Trigger(ids) =>
@@ -84,7 +84,7 @@ object PersistentCrontab {
                 }
             case UnSchedule(id, replyTo) =>
               context.log.info("Unscheduling job [{}]", id)
-              Effect.persist(JobRemoved(id, LocalDateTime.now(), replyTo.path.toString)).thenRun { state =>
+              Effect.persist(JobRemoved(id)).thenRun { state =>
                 nextTrigger = scheduleNext(context, longTermTimer, state, nextTrigger)
                 replyTo ! UnScheduled(id)
               }
@@ -95,7 +95,7 @@ object PersistentCrontab {
         },
         { (state, event) =>
           val newState = event match {
-            case JobScheduled(job, _, _) =>
+            case JobScheduled(job) =>
               job.when.nextTriggerTime(LocalDateTime.now()) match {
                 case Some(nextExecutionTime) =>
                   state.addJob(job, nextExecutionTime)
@@ -103,7 +103,7 @@ object PersistentCrontab {
                   // FIXME we can ignore it, will never be executed again but behaving differently in event handler feels wrong
                   state
               }
-            case JobRemoved(id, _, _) =>
+            case JobRemoved(id) =>
               state.removeJob(id)
             case JobTriggered(id, when) =>
               state.jobExecuted(id, when)

@@ -20,13 +20,19 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoField
 
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
+
 import scala.collection.immutable.Seq
 import scala.util.Try
+import com.fasterxml.jackson.annotation.{JsonIdentityInfo, JsonSubTypes, JsonTypeInfo, ObjectIdGenerators}
+import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonSerialize}
 
 /**
  * In lack of a better name, common base type for the classes that
  * describes when to run a cron job
  */
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 sealed trait CronTrigger {
 
   /** @return The time when it should run the next time after the 'now' timestamp,
@@ -88,6 +94,8 @@ object CronExpression {
 
 }
 
+@JsonSerialize(using = classOf[CronExpressionSerializer])
+@JsonDeserialize(using = classOf[CronExpressionDeserializer])
 final case class CronExpression(
    minute: MinuteExpression,
    hour: HourExpression,
@@ -245,7 +253,7 @@ object SingleExecution {
  * Execute something at one single point in time, do not repeat.
  * @param triggerTime (seconds are actually ignored, the granularity is minute wise)
  */
-final class SingleExecution private (private val triggerTime: LocalDateTime) extends CronTrigger {
+final class SingleExecution(val triggerTime: LocalDateTime) extends CronTrigger {
 
   override def nextTriggerTime(now: LocalDateTime): Option[LocalDateTime] = {
     val normalizedNow = now.`with`(ChronoField.SECOND_OF_MINUTE, 0)
