@@ -18,15 +18,21 @@ package com.markatta.akron
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.{ChronoField, TemporalField}
+import java.time.temporal.ChronoField
+
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 
 import scala.collection.immutable.Seq
 import scala.util.Try
+import com.fasterxml.jackson.annotation.{JsonIdentityInfo, JsonSubTypes, JsonTypeInfo, ObjectIdGenerators}
+import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonSerialize}
 
 /**
  * In lack of a better name, common base type for the classes that
  * describes when to run a cron job
  */
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
 sealed trait CronTrigger {
 
   /** @return The time when it should run the next time after the 'now' timestamp,
@@ -88,7 +94,8 @@ object CronExpression {
 
 }
 
-@SerialVersionUID(1L)
+@JsonSerialize(using = classOf[CronExpressionSerializer])
+@JsonDeserialize(using = classOf[CronExpressionDeserializer])
 final case class CronExpression(
    minute: MinuteExpression,
    hour: HourExpression,
@@ -156,7 +163,6 @@ sealed trait DayOfMonthExpression extends ExpressionCommons
 sealed trait MonthExpression extends ExpressionCommons
 sealed trait DayOfWeekExpression extends ExpressionCommons
 
-@SerialVersionUID(1L)
 final case class Exactly(n: Int)
   extends HourExpression
   with MinuteExpression
@@ -170,7 +176,6 @@ final case class Exactly(n: Int)
 
   override def toString: String = n.toString
 }
-@SerialVersionUID(1L)
 final case class Interval(every: Int)
   extends HourExpression
   with MinuteExpression
@@ -191,7 +196,6 @@ object Many {
 /**
  * A set of different time points, for example "0,15,45"
  */
-@SerialVersionUID(1L)
 final case class Many(times: Seq[Int])
   extends HourExpression
   with MinuteExpression
@@ -208,7 +212,6 @@ final case class Many(times: Seq[Int])
 /**
  * A range that is scoped by it's position/unit, for minute it would allow "0-59" for example.
  */
-@SerialVersionUID(1L)
 final case class Ranged(times: Range)
   extends HourExpression
   with MinuteExpression
@@ -226,7 +229,6 @@ final case class Ranged(times: Range)
  * All time points in the unit, the "*" in minute position would trigger each minute when the other
  * units are matching
  */
-@SerialVersionUID(1L)
 case object All
   extends HourExpression
   with MinuteExpression
@@ -251,8 +253,7 @@ object SingleExecution {
  * Execute something at one single point in time, do not repeat.
  * @param triggerTime (seconds are actually ignored, the granularity is minute wise)
  */
-@SerialVersionUID(1L)
-final class SingleExecution private (private val triggerTime: LocalDateTime) extends CronTrigger {
+final class SingleExecution(val triggerTime: LocalDateTime) extends CronTrigger {
 
   override def nextTriggerTime(now: LocalDateTime): Option[LocalDateTime] = {
     val normalizedNow = now.`with`(ChronoField.SECOND_OF_MINUTE, 0)

@@ -23,7 +23,7 @@ class TimeUtilsSpec extends BaseSpec {
       val a = LocalDateTime.of(2015, 2, 8, 20, 30, 23, 8)
       val b = LocalDateTime.of(2015, 2, 8, 20, 30, 24, 8)
       val result = TimeUtils.durationBetween(a, b)
-      result should be (1 second)
+      result should be (1.second)
     }
 
     "order dates local date times ascendingly" in {
